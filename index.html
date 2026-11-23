@@ -1,0 +1,2095 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HealthQuest</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+:root{--bg:#080c14;--bg2:#0d1420;--bg3:#111827;--bg4:#161f30;--border:#1e2d45;--border2:#2a3f5f;--text:#e8edf5;--text2:#7a90b0;--text3:#3a5070;--blue:#3b82f6;--blue2:#60a5fa;--cyan:#06b6d4;--green:#10b981;--orange:#f59e0b;--red:#ef4444;--purple:#8b5cf6}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh}
+
+/* TABS */
+.tab-bar{display:flex;align-items:center;background:var(--bg2);border-bottom:1px solid var(--border);padding:0 24px;position:sticky;top:0;z-index:100}
+.logo-tab{font-size:16px;font-weight:700;background:linear-gradient(135deg,#3b82f6,#06b6d4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-right:24px;padding:16px 0}
+.tab{padding:16px 20px;font-size:13px;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--blue2);border-bottom-color:var(--blue)}
+.tab-spacer{flex:1}
+.xp-pill{background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.2);color:var(--blue2);font-size:11px;padding:4px 12px;border-radius:20px;font-family:'JetBrains Mono',monospace}
+
+/* PANELS */
+.panel{display:none;height:calc(100vh - 53px);overflow-y:auto}
+.panel.active{display:block}
+
+/* ============ PANEL 1: CHARACTER ============ */
+.char-layout{display:grid;grid-template-columns:260px 1fr 280px;gap:0;height:100%}
+
+/* LEFT SIDEBAR */
+.char-sidebar{background:var(--bg2);border-right:1px solid var(--border);padding:20px;display:flex;flex-direction:column;gap:14px;overflow-y:auto}
+
+.avatar-block{text-align:center;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.avatar-ring{width:90px;height:90px;border-radius:50%;border:2px solid var(--blue);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;position:relative}
+.avatar-ring::before{content:'';position:absolute;inset:-4px;border-radius:50%;border:1px solid rgba(59,130,246,0.2)}
+.avatar-emoji{font-size:40px}
+.char-name-display{font-size:16px;font-weight:600;margin-bottom:2px}
+.char-class-display{font-size:11px;color:var(--text2);font-family:'JetBrains Mono',monospace}
+
+.xp-section{padding-bottom:14px;border-bottom:1px solid var(--border)}
+.xp-row{display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:6px;font-family:'JetBrains Mono',monospace}
+.xp-bar{height:8px;background:var(--bg3);border-radius:4px;overflow:hidden}
+.xp-fill{height:100%;background:linear-gradient(90deg,#3b82f6,#06b6d4);border-radius:4px;transition:width .8s ease}
+
+.section-label{font-size:10px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;font-family:'JetBrains Mono',monospace}
+
+.stat-list{display:flex;flex-direction:column;gap:8px}
+.stat-row{display:flex;align-items:center;gap:8px}
+.stat-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.stat-label{font-size:12px;color:var(--text2);flex:1}
+.stat-track{flex:1;height:4px;background:var(--bg3);border-radius:2px;overflow:hidden}
+.stat-val{font-size:12px;font-weight:600;font-family:'JetBrains Mono',monospace;min-width:26px;text-align:right}
+
+.debuff-list{display:flex;flex-wrap:wrap;gap:4px}
+.debuff{font-size:10px;padding:2px 8px;border-radius:10px}
+.debuff.red{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#f87171}
+.debuff.yellow{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);color:#fbbf24}
+.debuff.blue{background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.2);color:#60a5fa}
+.debuff.purple{background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.2);color:#a78bfa}
+.debuff.green{background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.2);color:#34d399}
+
+/* CENTER — BODY */
+.char-center{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:24px 20px;gap:12px;overflow-y:auto}
+
+.scan-wrap{position:relative;cursor:crosshair}
+.scan-line-anim{position:absolute;left:10px;right:10px;height:1px;background:linear-gradient(90deg,transparent,#06b6d4,transparent);animation:scanDown 3s linear infinite;top:0}
+@keyframes scanDown{0%{top:0;opacity:.7}50%{opacity:.2}100%{top:100%;opacity:0}}
+
+.zone-tooltip{position:absolute;background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:8px 12px;font-size:12px;white-space:nowrap;pointer-events:none;z-index:10;display:none;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.zone-tooltip.show{display:block}
+
+.body-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;width:100%;max-width:420px}
+.bm-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center}
+.bm-val{font-size:18px;font-weight:600;font-family:'JetBrains Mono',monospace}
+.bm-lbl{font-size:10px;color:var(--text3);margin-top:1px}
+
+.zone-detail{width:100%;max-width:420px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px}
+.zone-detail-title{font-size:13px;font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.zone-detail-text{font-size:12px;color:var(--text2);line-height:1.6}
+.zone-detail-action{margin-top:8px;font-size:11px;color:var(--blue2);font-family:'JetBrains Mono',monospace}
+
+/* RIGHT PANEL */
+.char-right{background:var(--bg2);border-left:1px solid var(--border);padding:20px;display:flex;flex-direction:column;gap:14px;overflow-y:auto}
+
+.param-editor{display:flex;flex-direction:column;gap:8px}
+.param-row{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg3);border-radius:8px}
+.param-name{font-size:12px;color:var(--text2);flex:1;min-width:80px}
+.param-adj{display:flex;align-items:center;gap:6px}
+.adj-btn{width:22px;height:22px;border-radius:4px;border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;transition:background .15s}
+.adj-btn:hover{background:var(--bg4)}
+.adj-val{font-size:13px;font-weight:600;font-family:'JetBrains Mono',monospace;min-width:36px;text-align:center}
+.adj-unit{font-size:10px;color:var(--text3);min-width:28px}
+
+.recalc-btn{width:100%;padding:10px;background:var(--blue);color:white;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;transition:background .2s}
+.recalc-btn:hover{background:#2563eb}
+
+.quest-items{display:flex;flex-direction:column;gap:6px}
+.quest-row{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg3);border-radius:8px;cursor:pointer;transition:background .15s}
+.quest-row:hover{background:var(--bg4)}
+.quest-circle{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--border2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;transition:all .2s}
+.quest-row.done .quest-circle{background:var(--green);border-color:var(--green);color:white}
+.quest-row.done .quest-name{text-decoration:line-through;color:var(--text3)}
+.quest-name{font-size:12px;flex:1;line-height:1.3}
+.quest-xp{font-size:10px;color:var(--green);font-weight:600;font-family:'JetBrains Mono',monospace;white-space:nowrap}
+
+/* ============ PANEL 2: LANDING ============ */
+.landing{background:var(--bg);min-height:100%}
+.hero-section{max-width:1100px;margin:0 auto;padding:80px 48px;display:grid;grid-template-columns:1fr 440px;gap:60px;align-items:center}
+.hero-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.2);color:var(--blue2);font-size:11px;padding:4px 12px;border-radius:20px;margin-bottom:20px;font-family:'JetBrains Mono',monospace}
+.hero-h1{font-size:52px;font-weight:800;line-height:1.1;letter-spacing:-1px;margin-bottom:18px}
+.hero-h1 span{background:linear-gradient(135deg,#3b82f6,#06b6d4,#10b981);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-p{font-size:17px;color:var(--text2);line-height:1.7;margin-bottom:28px;max-width:440px}
+.btn-p{background:linear-gradient(135deg,#3b82f6,#06b6d4);color:white;border:none;padding:13px 28px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;transition:opacity .2s}
+.btn-p:hover{opacity:.9}
+.btn-s{background:transparent;color:var(--text);border:1px solid var(--border2);padding:13px 28px;border-radius:10px;font-size:14px;cursor:pointer;margin-left:10px;transition:border-color .2s}
+.btn-s:hover{border-color:var(--blue)}
+.stats-strip{display:flex;gap:28px;margin-top:28px}
+.strip-num{font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace}
+.strip-lbl{font-size:11px;color:var(--text2);margin-top:2px}
+
+.preview-card{background:var(--bg2);border:1px solid var(--border);border-radius:18px;padding:20px;position:relative;overflow:hidden}
+.preview-card::before{content:'';position:absolute;top:-60px;right:-60px;width:220px;height:220px;background:radial-gradient(circle,rgba(59,130,246,.12) 0%,transparent 70%);pointer-events:none}
+
+.l-section{max-width:1100px;margin:0 auto;padding:64px 48px}
+.l-badge{font-size:11px;color:var(--cyan);font-family:'JetBrains Mono',monospace;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px}
+.l-h2{font-size:38px;font-weight:700;letter-spacing:-.5px;margin-bottom:14px}
+.l-p{font-size:16px;color:var(--text2);max-width:520px;line-height:1.7;margin-bottom:40px}
+
+.steps-g{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.step-c{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:24px 20px;transition:border-color .2s,transform .2s}
+.step-c:hover{border-color:var(--border2);transform:translateY(-2px)}
+.step-num{font-size:10px;color:var(--blue2);font-family:'JetBrains Mono',monospace;margin-bottom:14px}
+.step-ico{font-size:28px;margin-bottom:12px}
+.step-c h3{font-size:16px;font-weight:600;margin-bottom:6px}
+.step-c p{font-size:13px;color:var(--text2);line-height:1.6}
+
+.pricing-g{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.pc{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:24px}
+.pc.feat{border-color:var(--blue);background:rgba(59,130,246,.04);position:relative}
+.feat-tag{position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:var(--blue);color:white;font-size:10px;font-weight:600;padding:3px 12px;border-radius:20px}
+.pc-name{font-size:13px;color:var(--text2);margin-bottom:6px}
+.pc-price{font-size:34px;font-weight:700;font-family:'JetBrains Mono',monospace;margin-bottom:3px}
+.pc-period{font-size:12px;color:var(--text2);margin-bottom:18px}
+.pc-list{list-style:none;display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
+.pc-list li{font-size:12px;color:var(--text2);display:flex;gap:7px}
+.pc-list li::before{content:'✓';color:var(--green);font-weight:600;flex-shrink:0}
+.pc-list li.off::before{content:'—';color:var(--text3)}
+.pc-btn{width:100%;padding:10px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s}
+.pc-btn-p{background:var(--blue);color:white;border:none}
+.pc-btn-p:hover{background:#2563eb}
+.pc-btn-o{background:transparent;color:var(--text);border:1px solid var(--border2)}
+.pc-btn-o:hover{border-color:var(--blue)}
+
+.cta-band{margin:0 48px 60px;background:linear-gradient(135deg,rgba(59,130,246,.08),rgba(6,182,212,.08));border:1px solid rgba(59,130,246,.15);border-radius:20px;padding:56px 48px;text-align:center}
+.cta-band h2{font-size:38px;font-weight:700;margin-bottom:14px}
+.cta-band p{font-size:16px;color:var(--text2);margin-bottom:28px}
+
+.l-footer{border-top:1px solid var(--border);padding:24px 48px;display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--text3)}
+.l-footer-logo{font-size:16px;font-weight:700;background:linear-gradient(135deg,#3b82f6,#06b6d4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+
+/* ============ PANEL PLAN ============ */
+.plan-wrap{max-width:1100px;margin:0 auto;padding:32px 28px}
+.plan-header{margin-bottom:28px}
+.plan-h1{font-size:28px;font-weight:700;letter-spacing:-.5px;margin-bottom:6px}
+.plan-sub{font-size:14px;color:#7a90b0}
+.week-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px}
+.week-col{background:#0d1420;border:1px solid #1e2d45;border-radius:12px;overflow:hidden}
+.week-head{padding:12px 14px;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;border-bottom:1px solid #1e2d45}
+.week-body{padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.wi{display:flex;gap:8px;align-items:flex-start}
+.wi-ico{font-size:14px;flex-shrink:0;margin-top:1px}
+.wi-text{font-size:12px;color:#7a90b0;line-height:1.5}
+.wi-text strong{color:#e8edf5;display:block;font-size:11px;margin-bottom:2px}
+.direction-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px}
+.dir-card{background:#0d1420;border:1px solid #1e2d45;border-radius:12px;padding:16px}
+.dir-ico{font-size:24px;margin-bottom:8px}
+.dir-title{font-size:13px;font-weight:600;margin-bottom:4px}
+.dir-status{font-size:11px;padding:2px 8px;border-radius:10px;display:inline-block;margin-bottom:10px;font-family:'JetBrains Mono',monospace}
+.dir-items{display:flex;flex-direction:column;gap:5px}
+.dir-item{font-size:11px;color:#7a90b0;padding:5px 8px;background:#111827;border-radius:6px;line-height:1.4}
+.dir-item.now{border-left:2px solid #3b82f6}
+.dir-item.soon{border-left:2px solid #f59e0b}
+.dir-item.daily{border-left:2px solid #10b981}
+.plan-legend{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+.leg{display:flex;align-items:center;gap:6px;font-size:11px;color:#7a90b0}
+.leg-dot{width:8px;height:4px;border-radius:2px}
+.daily-checklist{background:#0d1420;border:1px solid #1e2d45;border-radius:12px;padding:20px;margin-bottom:28px}
+.dl-title{font-size:14px;font-weight:600;margin-bottom:14px}
+.dl-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.dl-block{background:#111827;border-radius:8px;padding:12px}
+.dl-block-title{font-size:10px;color:#7a90b0;text-transform:uppercase;letter-spacing:1px;font-family:'JetBrains Mono',monospace;margin-bottom:8px}
+.dl-row{display:flex;align-items:center;gap:8px;padding:4px 0}
+.dl-check{width:14px;height:14px;border-radius:3px;border:1.5px solid #2a3f5f;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;transition:all .15s}
+.dl-check.checked{background:#3b82f6;border-color:#3b82f6;color:white}
+.dl-label{font-size:12px;color:#7a90b0}
+.hq-alert{max-width:960px;margin:0 auto 16px;background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.25);border-radius:12px;padding:12px 16px;display:flex;gap:12px;align-items:flex-start;font-size:12.5px;color:#fca5a5;line-height:1.55}
+.hq-alert b{color:#fecaca}
+@media (max-width:900px){.char-layout{grid-template-columns:1fr;height:auto}.char-sidebar,.char-right{border:none}.panel{height:auto;min-height:calc(100vh - 53px)}.week-grid,.direction-strip{grid-template-columns:repeat(2,1fr)}.dl-grid{grid-template-columns:1fr}.hero-section{grid-template-columns:1fr;padding:40px 16px}.steps-g,.pricing-g{grid-template-columns:1fr}#tab-treatment [style*='grid-template-columns:1fr 1fr'],#tab-treatment [style*='repeat(3,1fr)'],#tab-plan [style*='repeat(3,1fr)']{grid-template-columns:1fr!important}}
+@media (max-width:560px){.week-grid,.direction-strip{grid-template-columns:1fr}.tab{padding:14px 12px}.plan-wrap{padding:20px 16px}}
+
+</style>
+</head>
+<body>
+
+<div class="tab-bar">
+  <div class="logo-tab">⚔️ HealthQuest</div>
+  <div class="tab active" onclick="switchTab('links',this)">🔗 Связи</div>
+  <div class="tab" onclick="switchTab('character',this)">⚔️ Мой персонаж</div>
+  <div class="tab" onclick="switchTab('landing',this)">🏠 О системе</div>
+  <div class="tab" onclick="switchTab('treatment',this)">💉 Лечение</div>
+  <div class="tab" onclick="switchTab('plan',this)">📅 План</div>
+  <div class="tab" onclick="switchTab('docs',this)">🗂 Документы</div>
+  <div class="tab-spacer"></div>
+  
+  <button id="lang-btn" onclick="toggleLang()" style="margin-left:10px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);color:#60a5fa;font-size:11px;padding:4px 10px;border-radius:16px;cursor:pointer;font-family:'JetBrains Mono',monospace;transition:all .2s;letter-spacing:.5px">EN</button>
+
+  <div class="xp-pill" id="total-xp">340 XP · Streak 3🔥</div>
+</div>
+
+<!-- ===== TAB 1: CHARACTER ===== -->
+<div class="panel" id="tab-character">
+<div class="char-layout">
+
+<!-- LEFT SIDEBAR -->
+<div class="char-sidebar">
+  <div class="avatar-block">
+    <div class="avatar-ring">
+      <div class="avatar-emoji" id="av-emoji">🧙</div>
+    </div>
+    <div class="char-name-display" id="av-name">Павел</div>
+    <div class="char-class-display" id="av-class">Кабинетный рыцарь · Уровень 12</div>
+  </div>
+
+  <div class="xp-section">
+    <div class="xp-row"><span>340 / 500 XP</span><span id="xp-to">Level 13</span></div>
+    <div class="xp-bar"><div class="xp-fill" id="xp-fill" style="width:68%"></div></div>
+  </div>
+
+  <div>
+    <div class="section-label" style="margin-bottom:8px">Характеристики</div>
+    <div class="stat-list">
+      <div class="stat-row">
+        <div class="stat-dot" style="background:#ef4444"></div>
+        <div class="stat-label">Жизнь</div>
+        <div class="stat-track"><div id="st-vit" style="height:100%;border-radius:2px;background:#ef4444;width:58%;transition:width .5s"></div></div>
+        <div class="stat-val" id="sv-vit" style="color:#ef4444">58</div>
+      </div>
+      <div class="stat-row">
+        <div class="stat-dot" style="background:#f59e0b"></div>
+        <div class="stat-label">Сила</div>
+        <div class="stat-track"><div id="st-str" style="height:100%;border-radius:2px;background:#f59e0b;width:44%;transition:width .5s"></div></div>
+        <div class="stat-val" id="sv-str" style="color:#f59e0b">44</div>
+      </div>
+      <div class="stat-row">
+        <div class="stat-dot" style="background:#3b82f6"></div>
+        <div class="stat-label">Интеллект</div>
+        <div class="stat-track"><div id="st-int" style="height:100%;border-radius:2px;background:#3b82f6;width:82%;transition:width .5s"></div></div>
+        <div class="stat-val" id="sv-int" style="color:#3b82f6">82</div>
+      </div>
+      <div class="stat-row">
+        <div class="stat-dot" style="background:#06b6d4"></div>
+        <div class="stat-label">Выносливость</div>
+        <div class="stat-track"><div id="st-end" style="height:100%;border-radius:2px;background:#06b6d4;width:35%;transition:width .5s"></div></div>
+        <div class="stat-val" id="sv-end" style="color:#06b6d4">35</div>
+      </div>
+      <div class="stat-row">
+        <div class="stat-dot" style="background:#8b5cf6"></div>
+        <div class="stat-label">Восстановление</div>
+        <div class="stat-track"><div id="st-rec" style="height:100%;border-radius:2px;background:#8b5cf6;width:28%;transition:width .5s"></div></div>
+        <div class="stat-val" id="sv-rec" style="color:#8b5cf6">28</div>
+      </div>
+      <div class="stat-row">
+        <div class="stat-dot" style="background:#10b981"></div>
+        <div class="stat-label">Питание</div>
+        <div class="stat-track"><div id="st-nut" style="height:100%;border-radius:2px;background:#10b981;width:50%;transition:width .5s"></div></div>
+        <div class="stat-val" id="sv-nut" style="color:#10b981">50</div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="section-label" style="margin-bottom:8px">Активные дебаффы</div>
+    <div class="debuff-list" id="debuff-list">
+      <span class="debuff red">⬇ Скрытая кровь</span>
+      <span class="debuff red">⬇ Тендиноз · после PRP</span>
+      <span class="debuff red">⬇ Апноэ AHI 12</span>
+      <span class="debuff yellow">⬇ Грыжи L4-S1</span>
+      <span class="debuff yellow">⬇ Гонартроз 1°</span>
+      <span class="debuff yellow">⬇ Голеностоп 2°</span>
+      <span class="debuff yellow">⬇ Дефицит Вит D</span>
+      <span class="debuff purple">❓ ЭКГ после 13.09</span>
+      <span class="debuff blue">⬆ ИНТ +82</span>
+    </div>
+  </div>
+
+  <div>
+    <div class="section-label" style="margin-bottom:8px">Достижения</div>
+    <div class="debuff-list">
+      <span class="debuff green">🔬 Первые анализы</span>
+      <span class="debuff green">🏊 Пловец</span>
+      <span class="debuff green">💊 Д-бафф</span>
+      <span class="debuff green">🥊 PRP Герой</span>
+      <span class="debuff green">😴 Сон проверен</span>
+      <span class="debuff" style="background:var(--bg3);border:1px solid var(--border);color:var(--text3)">⚖️ −5kg</span>
+    </div>
+  </div>
+</div>
+
+<!-- CENTER: BODY MAP -->
+<div class="char-center">
+
+  <div class="scan-wrap" id="scan-wrap">
+    <div class="scan-line-anim"></div>
+    <div class="zone-tooltip" id="tooltip"></div>
+
+    <svg id="body-svg" width="220" height="360" viewBox="0 0 220 360" style="animation:float 4s ease-in-out infinite;filter:drop-shadow(0 0 24px rgba(59,130,246,0.25))">
+      <defs>
+        <radialGradient id="bg1" cx="50%" cy="40%" r="60%">
+          <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.75"/>
+          <stop offset="100%" stop-color="#06b6d4" stop-opacity="0.35"/>
+        </radialGradient>
+        <radialGradient id="bg2g" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#1e3a5f" stop-opacity="0.9"/>
+          <stop offset="100%" stop-color="#0d1e35" stop-opacity="0.5"/>
+        </radialGradient>
+      </defs>
+
+      <!-- Ground glow -->
+      <ellipse cx="110" cy="352" rx="70" ry="10" fill="#3b82f6" opacity="0.1"/>
+
+      <!-- HEAD -->
+      <circle cx="110" cy="44" r="34" fill="url(#bg1)" opacity="0.9"/>
+      <!-- Hair -->
+      <path d="M80 36 Q85 16 110 14 Q135 16 140 36" fill="#1a3a60" opacity="0.7"/>
+      <!-- Eyes -->
+      <circle cx="100" cy="40" r="3.5" fill="#061020"/>
+      <circle cx="120" cy="40" r="3.5" fill="#061020"/>
+      <circle cx="101" cy="39" r="1" fill="white" opacity="0.6"/>
+      <circle cx="121" cy="39" r="1" fill="white" opacity="0.6"/>
+      <!-- Nose -->
+      <path d="M108 46 Q110 50 112 46" fill="none" stroke="#061020" stroke-width="1.2"/>
+      <!-- Mouth -->
+      <path d="M103 54 Q110 59 117 54" fill="none" stroke="#061020" stroke-width="1.5" stroke-linecap="round"/>
+
+      <!-- NECK -->
+      <rect x="96" y="76" width="28" height="20" rx="7" fill="url(#bg1)" opacity="0.85"/>
+
+      <!-- SHOULDERS + TORSO -->
+      <path d="M42 96 Q58 86 96 92 L124 92 Q162 86 178 96 L172 248 Q140 254 110 253 Q80 254 48 248 Z" fill="url(#bg1)" opacity="0.88"/>
+      <!-- Chest lines -->
+      <path d="M78 116 Q110 124 142 116" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="1.2"/>
+      <path d="M74 136 Q110 146 146 136" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+      <!-- Abs hint -->
+      <ellipse cx="110" cy="200" rx="24" ry="8" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+
+      <!-- LEFT ARM -->
+      <path d="M46 102 Q26 114 16 180 Q13 204 20 220" stroke="url(#bg1)" stroke-width="28" stroke-linecap="round" fill="none" opacity="0.82"/>
+      <!-- Left hand -->
+      <ellipse cx="20" cy="234" rx="14" ry="20" fill="url(#bg1)" opacity="0.75"/>
+      <!-- Finger hints -->
+      <path d="M10 228 Q6 238 10 246" fill="none" stroke="#061020" stroke-width="1" opacity="0.4"/>
+      <path d="M16 226 Q12 238 15 248" fill="none" stroke="#061020" stroke-width="1" opacity="0.4"/>
+
+      <!-- RIGHT ARM -->
+      <path d="M174 102 Q194 114 204 180 Q207 204 200 220" stroke="url(#bg1)" stroke-width="28" stroke-linecap="round" fill="none" opacity="0.82"/>
+      <!-- Right hand -->
+      <ellipse cx="200" cy="234" rx="14" ry="20" fill="url(#bg1)" opacity="0.75"/>
+      <path d="M210 228 Q214 238 210 246" fill="none" stroke="#061020" stroke-width="1" opacity="0.4"/>
+      <path d="M204 226 Q208 238 205 248" fill="none" stroke="#061020" stroke-width="1" opacity="0.4"/>
+
+      <!-- LEFT LEG -->
+      <path d="M82 250 Q68 296 60 330" stroke="url(#bg1)" stroke-width="30" stroke-linecap="round" fill="none" opacity="0.85"/>
+      <!-- Left foot -->
+      <ellipse cx="55" cy="342" rx="18" ry="10" fill="url(#bg1)" opacity="0.72"/>
+
+      <!-- RIGHT LEG -->
+      <path d="M138 250 Q152 296 160 330" stroke="url(#bg1)" stroke-width="30" stroke-linecap="round" fill="none" opacity="0.85"/>
+      <!-- Right foot -->
+      <ellipse cx="165" cy="342" rx="18" ry="10" fill="url(#bg1)" opacity="0.72"/>
+
+      <!-- ========= HOTSPOT ZONES ========= -->
+
+      <!-- NECK zone -->
+      <g class="zone-hit" data-zone="neck" style="cursor:pointer" onclick="zoneClick('neck')">
+        <circle cx="110" cy="87" r="14" fill="transparent"/>
+        <circle cx="110" cy="87" r="9" fill="#f59e0b" opacity="0.25"/>
+        <circle cx="110" cy="87" r="5" fill="#f59e0b" opacity="0.85"/>
+        <circle cx="110" cy="87" r="2" fill="white"/>
+      </g>
+
+      <!-- THYROID (small dot near neck) -->
+      <g class="zone-hit" data-zone="thyroid" style="cursor:pointer" onclick="zoneClick('thyroid')">
+        <circle cx="128" cy="82" r="10" fill="transparent"/>
+        <circle cx="128" cy="82" r="5" fill="#3b82f6" opacity="0.3"/>
+        <circle cx="128" cy="82" r="3" fill="#3b82f6" opacity="0.9"/>
+      </g>
+
+      <!-- STOMACH -->
+      <g class="zone-hit" data-zone="stomach" style="cursor:pointer" onclick="zoneClick('stomach')">
+        <circle cx="100" cy="175" r="14" fill="transparent"/>
+        <circle cx="100" cy="175" r="9" fill="#ef4444" opacity="0.2"/>
+        <circle cx="100" cy="175" r="5" fill="#ef4444" opacity="0.85"/>
+        <circle cx="100" cy="175" r="2" fill="white"/>
+      </g>
+
+      <!-- HEART (episode 13.09, ECG pending) -->
+      <g class="zone-hit" data-zone="heart" style="cursor:pointer" onclick="zoneClick('heart')">
+        <circle cx="126" cy="128" r="13" fill="transparent"/>
+        <circle cx="126" cy="128" r="9" fill="#ef4444" opacity="0.2"/>
+        <circle cx="126" cy="128" r="5" fill="#ef4444" opacity="0.85"/>
+        <circle cx="126" cy="128" r="2" fill="white"/>
+      </g>
+
+      <!-- SLEEP APNEA (airway) -->
+      <g class="zone-hit" data-zone="apnea" style="cursor:pointer" onclick="zoneClick('apnea')">
+        <circle cx="92" cy="64" r="11" fill="transparent"/>
+        <circle cx="92" cy="64" r="8" fill="#ef4444" opacity="0.2"/>
+        <circle cx="92" cy="64" r="4.5" fill="#ef4444" opacity="0.85"/>
+        <circle cx="92" cy="64" r="1.8" fill="white"/>
+      </g>
+
+      <!-- LOWER BACK / LUMBAR -->
+      <g class="zone-hit" data-zone="lumbar" style="cursor:pointer" onclick="zoneClick('lumbar')">
+        <circle cx="110" cy="228" r="16" fill="transparent"/>
+        <circle cx="110" cy="228" r="12" fill="#f59e0b" opacity="0.2"/>
+        <circle cx="110" cy="228" r="7" fill="#f59e0b" opacity="0.85"/>
+        <circle cx="110" cy="228" r="3" fill="white"/>
+      </g>
+
+      <!-- RIGHT ELBOW -->
+      <g class="zone-hit" data-zone="elbow" style="cursor:pointer" onclick="zoneClick('elbow')">
+        <circle cx="202" cy="185" r="16" fill="transparent"/>
+        <circle cx="202" cy="185" r="11" fill="#ef4444" opacity="0.2"/>
+        <circle cx="202" cy="185" r="7" fill="#ef4444" opacity="0.85"/>
+        <circle cx="202" cy="185" r="3" fill="white"/>
+        <text x="214" y="180" fill="#f87171" font-size="9" font-family="JetBrains Mono">−STR</text>
+      </g>
+
+      <!-- RIGHT WRIST -->
+      <g class="zone-hit" data-zone="wrist" style="cursor:pointer" onclick="zoneClick('wrist')">
+        <circle cx="200" cy="232" r="12" fill="transparent"/>
+        <circle cx="200" cy="232" r="8" fill="#f59e0b" opacity="0.2"/>
+        <circle cx="200" cy="232" r="5" fill="#f59e0b" opacity="0.8"/>
+        <circle cx="200" cy="232" r="2" fill="white"/>
+      </g>
+
+      <!-- RIGHT KNEE -->
+      <g class="zone-hit" data-zone="knee" style="cursor:pointer" onclick="zoneClick('knee')">
+        <circle cx="158" cy="306" r="14" fill="transparent"/>
+        <circle cx="158" cy="306" r="10" fill="#f59e0b" opacity="0.2"/>
+        <circle cx="158" cy="306" r="6" fill="#f59e0b" opacity="0.85"/>
+        <circle cx="158" cy="306" r="2.5" fill="white"/>
+      </g>
+
+      <!-- RIGHT ANKLE -->
+      <g class="zone-hit" data-zone="ankle" style="cursor:pointer" onclick="zoneClick('ankle')">
+        <circle cx="162" cy="338" r="12" fill="transparent"/>
+        <circle cx="162" cy="338" r="8" fill="#f59e0b" opacity="0.2"/>
+        <circle cx="162" cy="338" r="5" fill="#f59e0b" opacity="0.8"/>
+        <circle cx="162" cy="338" r="2" fill="white"/>
+      </g>
+
+      <!-- INT buff on head -->
+      <circle cx="110" cy="14" r="7" fill="#8b5cf6" opacity="0.9"/>
+      <text x="106.5" y="18" fill="white" font-size="8" font-family="JetBrains Mono">INT</text>
+
+      <!-- HUD corner brackets -->
+      <path d="M4 8 L4 24 M4 8 L20 8" fill="none" stroke="#3b82f6" stroke-width="1.5" opacity="0.4"/>
+      <path d="M216 8 L216 24 M216 8 L200 8" fill="none" stroke="#3b82f6" stroke-width="1.5" opacity="0.4"/>
+      <path d="M4 352 L4 336 M4 352 L20 352" fill="none" stroke="#3b82f6" stroke-width="1.5" opacity="0.4"/>
+      <path d="M216 352 L216 336 M216 352 L200 352" fill="none" stroke="#3b82f6" stroke-width="1.5" opacity="0.4"/>
+
+      <!-- Side data lines -->
+      <line x1="4" y1="87" x2="96" y2="87" stroke="#f59e0b" stroke-width="0.5" stroke-dasharray="3,3" opacity="0.4"/>
+      <line x1="4" y1="228" x2="98" y2="228" stroke="#f59e0b" stroke-width="0.5" stroke-dasharray="3,3" opacity="0.4"/>
+      <text x="6" y="84" fill="#f59e0b" font-size="8" font-family="JetBrains Mono" opacity="0.7">C5-C6</text>
+      <text x="6" y="225" fill="#f59e0b" font-size="8" font-family="JetBrains Mono" opacity="0.7">L4-S1</text>
+    </svg>
+  </div>
+
+  <!-- Bottom metrics -->
+  <div class="body-metrics">
+    <div class="bm-card">
+      <div class="bm-val" id="bm-score" style="color:#3b82f6">58</div>
+      <div class="bm-lbl">Состояние</div>
+    </div>
+    <div class="bm-card">
+      <div class="bm-val" style="color:#ef4444">10</div>
+      <div class="bm-lbl">Проблем</div>
+    </div>
+    <div class="bm-card">
+      <div class="bm-val" style="color:#f59e0b">24.1</div>
+      <div class="bm-lbl">Vit D</div>
+    </div>
+    <div class="bm-card">
+      <div class="bm-val" style="color:#10b981">97</div>
+      <div class="bm-lbl">Weight kg</div>
+    </div>
+  </div>
+
+  <!-- Zone detail -->
+  <div class="zone-detail" id="zone-detail">
+    <div class="zone-detail-title" id="zd-title" style="color:var(--text2)">Нажмите зону для деталей</div>
+    <div class="zone-detail-text" id="zd-text">Нажмите на светящуюся точку, чтобы узнать подробности.</div>
+    <div class="zone-detail-action" id="zd-action"></div>
+  </div>
+
+</div>
+
+<!-- RIGHT PANEL -->
+<div class="char-right">
+
+  <div>
+    <div class="section-label" style="margin-bottom:10px">Редактировать</div>
+    <div class="param-editor" id="param-editor">
+      <!-- generated by JS -->
+    </div>
+    <button class="recalc-btn" style="margin-top:10px" onclick="recalc()">Пересчитать персонажа ↻</button>
+  </div>
+
+  <div>
+    <div class="section-label" style="margin-bottom:10px">Задания на сегодня</div>
+    <div class="quest-items" id="quest-list">
+      <!-- generated by JS -->
+    </div>
+    <div style="margin-top:8px;font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace;" id="quest-xp-total">Заработано сегодня: 20 XP</div>
+  </div>
+
+</div>
+
+</div>
+</div>
+
+<!-- ===== TAB 2: LANDING ===== -->
+<div class="panel" id="tab-landing">
+<div class="landing">
+
+  <div class="hero-section">
+    <div>
+      <div class="hero-badge">⚡ RPG встречает здоровье</div>
+      <h1 class="hero-h1">Твоё тело — это<br><span>лист персонажа</span></h1>
+      <p class="hero-p">Введи свои показатели. Получи класс. Выполняй ежедневные задания. Смотри, как твой персонаж растёт вместе с тобой — без медкарт и загрузок.</p>
+      <button class="btn-p" onclick="switchTab('character',document.querySelector('.tab'))">Играть — это бесплатно</button>
+      <button class="btn-s">Смотреть демо</button>
+      <div class="stats-strip">
+        <div><div class="strip-num">12K+</div><div class="strip-lbl">Активных игроков</div></div>
+        <div><div class="strip-num">4.8★</div><div class="strip-lbl">Рейтинг</div></div>
+        <div><div class="strip-num">89%</div><div class="strip-lbl">Ежедневных</div></div>
+      </div>
+    </div>
+    <div class="preview-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <div><div style="font-size:14px;font-weight:600;">Павел — Кабинетный рыцарь</div><div style="font-size:11px;color:var(--text2);font-family:'JetBrains Mono',monospace;">Level 12 · 340 XP</div></div>
+        <div style="font-size:28px;animation:float 4s ease-in-out infinite">🧙</div>
+      </div>
+      <div style="height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-bottom:12px"><div style="width:68%;height:100%;background:linear-gradient(90deg,#3b82f6,#06b6d4);border-radius:3px"></div></div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px">
+        <div style="background:var(--bg3);border-radius:6px;padding:8px;text-align:center"><div style="font-size:16px;font-weight:600;color:#ef4444;font-family:'JetBrains Mono',monospace">58</div><div style="font-size:9px;color:var(--text3)">ЖИЗНЬ</div></div>
+        <div style="background:var(--bg3);border-radius:6px;padding:8px;text-align:center"><div style="font-size:16px;font-weight:600;color:#3b82f6;font-family:'JetBrains Mono',monospace">82</div><div style="font-size:9px;color:var(--text3)">ИНТЕЛЛЕКТ</div></div>
+        <div style="background:var(--bg3);border-radius:6px;padding:8px;text-align:center"><div style="font-size:16px;font-weight:600;color:#8b5cf6;font-family:'JetBrains Mono',monospace">28</div><div style="font-size:9px;color:var(--text3)">ВОССТАНОВЛ.</div></div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px">
+        <span style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#f87171;font-size:10px;padding:2px 7px;border-radius:10px">⬇ Тендиноз</span>
+        <span style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);color:#fbbf24;font-size:10px;padding:2px 7px;border-radius:10px">⬇ Артроз 2°</span>
+        <span style="background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.2);color:#a78bfa;font-size:10px;padding:2px 7px;border-radius:10px">⬆ ИНТ +82</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="l-section" style="padding-top:0">
+    <div class="l-badge">// КАК ЭТО РАБОТАЕТ</div>
+    <h2 class="l-h2">Без врачей. Без загрузок.<br>Только ты и твои характеристики.</h2>
+    <p class="l-p">Вводишь что знаешь. Получаешь персонажа. Реальные привычки — реальный опыт.</p>
+    <div class="steps-g">
+      <div class="step-c"><div class="step-num">ШАГ 01</div><div class="step-ico">🧬</div><h3>Создай персонажа</h3><p>Вес, сон, уровень боли, энергия. Никаких документов. Ты контролируешь всё.</p></div>
+      <div class="step-c"><div class="step-num">ШАГ 02</div><div class="step-ico">⚔️</div><h3>Получи класс и характеристики</h3><p>Данные превращаются в Жизнь, Силу, Выносливость. Дебаффы — слабые места. Баффы — суперсила.</p></div>
+      <div class="step-c"><div class="step-num">ШАГ 03</div><div class="step-ico">🏆</div><h3>Выполняй ежедневные задания</h3><p>Плавание → +50 XP. Сон 8ч → +20 XP. С каждой привычкой персонаж растёт по-настоящему.</p></div>
+    </div>
+  </div>
+
+  <div class="l-section" style="padding-top:0">
+    <div class="l-badge">// ЦЕНЫ</div>
+    <h2 class="l-h2">Выбери план</h2>
+    <p class="l-p">Начни бесплатно. Прокачайся когда будешь готов.</p>
+    <div class="pricing-g">
+      <div class="pc"><div class="pc-name">Бесплатный</div><div class="pc-price">$0</div><div class="pc-period">навсегда</div><ul class="pc-list"><li>Создание персонажа</li><li>5 ежедневных заданий</li><li>3 характеристики</li><li class="off">ИИ-советник по здоровью</li><li class="off">Аналитика</li></ul><button class="pc-btn pc-btn-o" onclick="switchTab('character',document.querySelectorAll('.tab')[0])">Начать бесплатно</button></div>
+      <div class="pc feat"><div class="feat-tag">Топ выбор</div><div class="pc-name">Герой</div><div class="pc-price">$9</div><div class="pc-period">в месяц</div><ul class="pc-list"><li>Полная система персонажа</li><li>Безлимитные задания</li><li>Все 8 характеристик</li><li>ИИ-советник (Claude)</li><li>Аналитика прогресса</li></ul><button class="pc-btn pc-btn-p">Начать 14-дневный триал</button></div>
+      <div class="pc"><div class="pc-name">Гильдия (Команды)</div><div class="pc-price">$49</div><div class="pc-period">за команду / в мес.</div><ul class="pc-list"><li>Всё из Героя</li><li>До 10 участников</li><li>Таблица лидеров</li><li>HR дашборд</li><li>Кастомный брендинг</li></ul><button class="pc-btn pc-btn-o">Связаться</button></div>
+    </div>
+  </div>
+
+  <div class="cta-band">
+    <h2>Готов прокачаться?</h2>
+    <p>Присоединяйся к 12 000+ игрокам, которые превратили здоровье в игру, в которую хочется играть.</p>
+    <button class="btn-p" style="font-size:15px;padding:14px 36px" onclick="switchTab('character',document.querySelectorAll('.tab')[0])">Создать персонажа — это бесплатно</button>
+  </div>
+
+  <div class="l-footer">
+    <div class="l-footer-logo">⚔️ HealthQuest</div>
+    <div>© 2026 HealthQuest · Не медицинские советы · Просто эпические задания</div>
+    <div style="display:flex;gap:16px"><a href="#" style="color:var(--text3);text-decoration:none">Конфиденциальность</a><a href="#" style="color:var(--text3);text-decoration:none">Условия</a></div>
+  </div>
+</div>
+</div>
+
+<script>
+// --- TABS ---
+function switchTab(id, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelector('.tab[onclick*="'+id+'"]').classList.add('active');
+  document.getElementById('tab-'+id).classList.add('active');
+}
+
+// --- PARAMS ---
+const params = [
+  {id:'vd', label:'Витамин D', val:24, min:0, max:100, unit:'ng/mL'},
+  {id:'wt', label:'Вес', val:97, min:40, max:160, unit:'kg'},
+  {id:'sw', label:'Плавание', val:2, min:0, max:7, unit:'×/нед'},
+  {id:'sl', label:'Сон', val:6, min:2, max:10, unit:'ч'},
+  {id:'el', label:'Боль в локте', val:7, min:0, max:10, unit:'/10'},
+  {id:'kn', label:'Боль в колене', val:4, min:0, max:10, unit:'/10'},
+  {id:'st', label:'Стресс', val:7, min:0, max:10, unit:'/10'},
+  {id:'en', label:'Энергия', val:5, min:0, max:10, unit:'/10'},
+];
+
+const pvals = {};
+params.forEach(p => pvals[p.id] = p.val);
+
+function buildParams() {
+  const el = document.getElementById('param-editor');
+  el.innerHTML = params.map(p => `
+    <div class="param-row">
+      <div class="param-name">${p.label}</div>
+      <div class="param-adj">
+        <button class="adj-btn" onclick="adjP('${p.id}',-1)">−</button>
+        <div class="adj-val" id="pv-${p.id}">${p.val}</div>
+        <div class="adj-unit">${p.unit}</div>
+        <button class="adj-btn" onclick="adjP('${p.id}',1)">+</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function adjP(id, d) {
+  const p = params.find(x => x.id === id);
+  pvals[id] = Math.max(p.min, Math.min(p.max, pvals[id] + d));
+  document.getElementById('pv-'+id).textContent = pvals[id];
+}
+
+function recalc() {
+  const {vd, wt, sw, sl, el, kn, st, en} = pvals;
+  const vit = Math.round((vd/100)*20 + ((160-wt)/120)*20 + (sl/10)*20 + ((10-el)/10)*20 + ((10-kn)/10)*20);
+  const str = Math.round((sw/7)*40 + ((160-wt)/120)*30 + ((10-el)/10)*30);
+  const intel = Math.round((en/10)*50 + ((10-st)/10)*50);
+  const endur = Math.round((sw/7)*50 + (sl/10)*30 + ((10-kn)/10)*20);
+  const rec = Math.round((vd/100)*30 + (sl/10)*40 + ((10-el)/10)*15 + ((10-kn)/10)*15);
+  const nut = Math.round(((10-st)/10)*40 + (en/10)*30 + (vd/100)*30);
+
+  setS('vit', vit, '#ef4444');
+  setS('str', str, '#f59e0b');
+  setS('int', intel, '#3b82f6');
+  setS('end', endur, '#06b6d4');
+  setS('rec', rec, '#8b5cf6');
+  setS('nut', nut, '#10b981');
+
+  const avg = Math.round((vit+str+intel+endur+rec+nut)/6);
+  document.getElementById('bm-score').textContent = avg;
+  const lvl = Math.max(1, Math.round(avg/6));
+  document.getElementById('xp-fill').style.width = (avg % 10)*10 + '%';
+
+  let cls, emoji;
+  if (sw >= 5 && endur > 70) { cls = 'Iron Swimmer'; emoji = '🏊'; }
+  else if (intel > 75 && str < 40) { cls = 'Desk Knight'; emoji = '🧙'; }
+  else if (rec > 70) { cls = 'Recovery Mage'; emoji = '🔮'; }
+  else if (avg > 70) { cls = 'Bio Paladin'; emoji = '⚔️'; }
+  else { cls = 'Health Rookie'; emoji = '🌱'; }
+
+  document.getElementById('av-class').textContent = cls + ' · Level ' + lvl;
+  document.getElementById('av-emoji').textContent = emoji;
+  document.getElementById('xp-to').textContent = 'Level ' + (lvl+1);
+  document.getElementById('total-xp').textContent = Math.round(avg*5) + ' XP · Streak 3🔥';
+}
+
+function setS(id, val, color) {
+  const clamped = Math.max(0, Math.min(100, val));
+  document.getElementById('st-'+id).style.width = clamped+'%';
+  document.getElementById('sv-'+id).textContent = clamped;
+}
+
+// --- QUESTS ---
+
+function getQuestNames() {
+  const t = i18n[currentLang];
+  return [
+    {id:1, name:t['q1'], xp:50, done:false},
+    {id:2, name:t['q2'], xp:20, done:false},
+    {id:3, name:t['q3'], xp:30, done:false},
+    {id:4, name:t['q4'], xp:15, done:false},
+    {id:5, name:t['q5'], xp:10, done:false},
+    {id:6, name:t['q6'], xp:10, done:false},
+    {id:7, name:t['q7'], xp:10, done:false},
+  ];
+}
+const quests = [
+  {text:'Плавание 40 минут', xp:50, emoji:'🏊', done:false},
+  {text:'Витамин D 5000 МЕ', xp:10, emoji:'💊', done:true},
+  {text:'Сон до 23:00', xp:20, emoji:'😴', done:false},
+  {text:'Эксцентрика локоть 3×15', xp:30, emoji:'💪', done:false},
+  {text:'Вода 2 л', xp:15, emoji:'💧', done:false},
+  {text:'Миотерапия глотки (апноэ)', xp:15, emoji:'👅', done:false},
+  {text:'Записаться на ЭКГ + кардиолог', xp:100, emoji:'❤️', done:false},
+  {text:'Оценка локтя: 6 нед после PRP', xp:100, emoji:'📏', done:false},
+];
+
+function buildQuests() {
+  const el = document.getElementById('quest-list');
+  el.innerHTML = quests.map((q,i) => `
+    <div class="quest-row${q.done?' done':''}" onclick="toggleQ(${i})">
+      <div class="quest-circle">${q.done?'✓':''}</div>
+      <div class="quest-name">${q.emoji} ${q.text}</div>
+      <div class="quest-xp">+${q.xp} XP</div>
+    </div>
+  `).join('');
+  const earned = quests.filter(q=>q.done).reduce((a,q)=>a+q.xp,0);
+  document.getElementById('quest-xp-total').textContent = 'Заработано сегодня: ' + earned + ' XP';
+}
+
+function toggleQ(i) {
+  quests[i].done = !quests[i].done;
+  buildQuests();
+}
+
+// --- ZONE CLICK ---
+
+// zoneData now sourced from i18n[currentLang]
+function zoneClick(zone) {
+  currentZone = zone;
+  const zd = i18n[currentLang][zone];
+  if (!zd) return;
+  document.getElementById('zd-title').innerHTML = zd.title;
+  document.getElementById('zd-text').textContent = zd.text;
+  document.getElementById('zd-action').textContent = zd.action;
+  // highlight
+  document.querySelectorAll('.zone-hit').forEach(g => g.style.opacity = '0.5');
+  const hit = document.querySelector(`.zone-hit[data-zone="${zone}"]`);
+  if (hit) { hit.style.opacity = '1'; setTimeout(() => hit.style.opacity = '', 1500); }
+}
+const _zoneData_legacy = {
+  elbow:{title:'⚠ Right elbow — chronic tendinosis',color:'#ef4444',text:'3-year chronic tendinosis of the medial epicondyle. Physio (22 sessions) had no lasting effect. The issue is tissue degeneration, not inflammation.',action:'Next: PRP injection at Stopartroz · from $80'},
+  lumbar:{title:'⚠ Lower back — L4-L5 & L5-S1',color:'#ef4444',text:'Two herniated discs (0.3 and 0.4 cm) compressing nerve roots L4 and S1. Caused by 12 years of desk work + heavy barbell training.',action:'Plan: Swimming + core workout daily · Control MRI in 6 months'},
+  ankle:{title:'◈ Right ankle — arthrosis 2°',color:'#f59e0b',text:'Joint space narrowed to 2.0mm (norm 3.0mm). Cartilage thinned. Caused by boxing and falls. Cannot regenerate, but can stabilize.',action:'Plan: Orthotics + collagen + swimming + weight loss'},
+  knee:{title:'◈ Right knee — gonarthrosis 1°',color:'#f59e0b',text:'Grade 1 Kellgren-Lawrence. Joint space 4.5mm. Appeared after intense cycling uphill. Caught early — good prognosis.',action:'Plan: Rest 2w → quad exercises → low-resistance cycling'},
+  neck:{title:'◈ Cervical spine — osteochondrosis',color:'#f59e0b',text:'Degenerative changes C2-Th1, scoliosis, C5-C6 disc protrusion (0.15cm). Nerve roots not compressed.',action:'Fix: Monitor at eye level · 45-min posture breaks'},
+  thyroid:{title:'◇ Thyroid — monitoring',color:'#3b82f6',text:'Ultrasound shows moderate structural changes and increased vascularization. TSH 1.054 — normal. Possible AIT.',action:'Next: Test AT-TPO · Endocrinologist via insurance'},
+  stomach:{title:'◇ Stomach — gastropathy',color:'#f59e0b',text:'Erythematous antral gastropathy from 3 years of NSAID use. Endoscopy was incomplete due to gag reflex.',action:'Next: Endoscopy under sedation · Minimize NSAIDs'},
+  wrist:{title:'○ Right wrist — minor changes',color:'#10b981',text:'MRI (May 2025): no pathological changes. Ligaments intact. TFCC not damaged. Early degenerative signs on ultrasound only.',action:'No active treatment needed · Ergonomic wrist rest'},
+};
+
+
+
+// --- INIT ---
+buildParams();
+buildQuests();
+</script>
+
+
+<!-- ====== TAB 4: TREATMENT ====== -->
+<div class="panel" id="tab-treatment">
+<div style="max-width:960px;margin:0 auto;padding:28px 24px;font-family:'Inter',sans-serif;">
+
+  <div style="margin-bottom:24px;">
+    <div style="font-size:11px;color:#06b6d4;font-family:'JetBrains Mono',monospace;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;">// ПЛАН ЛЕЧЕНИЯ</div>
+    <h2 style="font-size:22px;font-weight:600;margin-bottom:6px;">Куда обратиться и что делать</h2>
+    <p style="font-size:13px;color:#7a90b0;">По медкарте от 20.11.2026 · документы 2021–2026 · обновлено 21.11.2026</p>
+  </div>
+
+  <!-- OPEN URGENT ITEMS -->
+  <div style="background:#0d1420;border:1px solid rgba(239,68,68,0.3);border-radius:14px;overflow:hidden;margin-bottom:16px;">
+    <div style="background:rgba(239,68,68,0.06);border-bottom:1px solid #1e2d45;padding:14px 20px;display:flex;align-items:center;gap:12px;">
+      <div style="width:32px;height:32px;border-radius:8px;background:rgba(239,68,68,0.15);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">🚩</div>
+      <div style="flex:1;">
+        <div style="font-size:15px;font-weight:600;">Незакрытое и важное</div>
+        <div style="font-size:12px;color:#7a90b0;margin-top:2px;">Три вопроса, которые сейчас важнее всего остального</div>
+      </div>
+      <div style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.25);color:#f87171;font-size:11px;padding:3px 10px;border-radius:20px;">🔴 Сделать первым</div>
+    </div>
+    <div style="padding:16px 20px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+      <div style="background:#111827;border-radius:10px;padding:14px;border-left:3px solid #ef4444;">
+        <div style="font-size:13px;font-weight:600;color:#e8edf5;margin-bottom:6px;">🩸 Скрытая кровь в кале</div>
+        <div style="font-size:12px;color:#7a90b0;line-height:1.6;">Положительно 23–24.07.2026 (Hb+, Hb/Hp+), анемии нет. ЭГДС 2024 прервали, 08.10 эндоскопия не состоялась. Гастроэнтеролог 20.10 — итог не записан.</div>
+        <div style="font-size:11px;color:#60a5fa;margin-top:8px;font-family:'JetBrains Mono',monospace;line-height:1.6;">→ Капсульная эндоскопия или ЭГДС под седацией<br>→ Дыхательный тест на хеликобактер<br>→ ГГТ, липиды, гепатиты B и C (АЛТ 51)</div>
+      </div>
+      <div style="background:#111827;border-radius:10px;padding:14px;border-left:3px solid #ef4444;">
+        <div style="font-size:13px;font-weight:600;color:#e8edf5;margin-bottom:6px;">❤️ ЭКГ после эпизода 13.09</div>
+        <div style="font-size:12px;color:#7a90b0;line-height:1.6;">После бассейна и бани 1–2 дня давило в груди, ночью тянуло левую руку. ЭКГ после этого не зафиксирована.</div>
+        <div style="font-size:11px;color:#60a5fa;margin-top:8px;font-family:'JetBrains Mono',monospace;line-height:1.6;">→ ЭКГ + кардиолог по ДМС (Медси)<br>→ Обсудить нагрузочную пробу или ЭхоКГ<br>→ Давит > 15 мин, отдаёт в руку/челюсть — 112</div>
+      </div>
+      <div style="background:#111827;border-radius:10px;padding:14px;border-left:3px solid #f59e0b;">
+        <div style="font-size:13px;font-weight:600;color:#e8edf5;margin-bottom:6px;">📏 Локоть: 6 недель после PRP</div>
+        <div style="font-size:12px;color:#7a90b0;line-height:1.6;">PRP 14–15.10.2026, 6 недель исполняется около 26.11. Сравнить боль со стартовыми цифрами.</div>
+        <div style="font-size:11px;color:#60a5fa;margin-top:8px;font-family:'JetBrains Mono',monospace;line-height:1.6;">→ Бутылка 1,5 л прямой рукой (0–10)<br>→ Сильное рукопожатие (0–10)<br>→ Нажатие на больную точку (0–10)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ELBOW -->
+  <div style="background:#0d1420;border:1px solid #1e2d45;border-radius:14px;overflow:hidden;margin-bottom:16px;">
+    <div style="background:rgba(239,68,68,0.06);border-bottom:1px solid #1e2d45;padding:16px 20px;display:flex;align-items:center;gap:12px;">
+      <div style="width:32px;height:32px;border-radius:8px;background:rgba(239,68,68,0.15);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">💪</div>
+      <div style="flex:1;">
+        <div style="font-size:15px;font-weight:600;">Правый локоть — хронический тендиноз</div>
+        <div style="font-size:12px;color:#7a90b0;margin-top:2px;">3-й год · ~40 занятий ЛФК без стойкого эффекта · PRP сделана 14–15.10.2026</div>
+      </div>
+      <div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);color:#34d399;font-size:11px;padding:3px 10px;border-radius:20px;">💉 PRP сделана · восстановление</div>
+    </div>
+    <div style="padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <div>
+        <div style="font-size:10px;color:#3a5070;letter-spacing:1.5px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:8px;">Где сделана PRP</div>
+        <div style="background:#111827;border-radius:10px;padding:14px;margin-bottom:8px;">
+          <div style="font-size:13px;font-weight:600;color:#e8edf5;margin-bottom:4px;">СМ-Клиника, Солнцево</div>
+          <div style="font-size:12px;color:#7a90b0;line-height:1.6;">Врач: Сапежников Владимир Владимирович<br>14–15.10.2026 · приём 3 200 ₽ + PRP 10 100 ₽<br>25.10: ноет место укола — норма, 1–2 недели</div>
+          <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+            <div style="background:#111827;border:1px solid #2a3f5f;color:#60a5fa;font-size:11px;padding:5px 12px;border-radius:6px;">Курс обычно 1–3 укола через 2–4 нед</div>
+          </div>
+          <div style="font-size:11px;color:#4a6080;margin-top:8px;line-height:1.5;">Запасной вариант: Стопартроз (Холиков Т.В., Мурадханов А.А.) · +7 (495) 134-03-41</div>
+        </div>
+        <div style="font-size:10px;color:#3a5070;letter-spacing:1.5px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:8px;margin-top:12px;">Почему не помогало раньше</div>
+        <div style="font-size:12px;color:#7a90b0;line-height:1.6;background:#111827;border-radius:8px;padding:12px;">
+          Физио (лазер, магнит, массаж) лечит <b style="color:#e8edf5;">воспаление</b>. У тебя уже <b style="color:#f87171;">тендиноз</b> — дегенерация ткани. Клетки перестали обновляться. Физио при тендинозе неэффективно.<br><br>
+          PRP вводит факторы роста прямо в ткань → запускает регенерацию. Эксцентрика механически стимулирует клетки. Только эта комбинация работает при хроническом тендинозе.
+        </div>
+      </div>
+      <div>
+        <div style="font-size:10px;color:#3a5070;letter-spacing:1.5px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:8px;">Что делать: план по неделям</div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <div style="background:#111827;border-radius:8px;padding:10px 12px;display:flex;gap:10px;">
+            <div style="font-size:10px;color:#10b981;font-family:'JetBrains Mono',monospace;min-width:52px;padding-top:1px;">✓ Нед 1–2</div>
+            <div style="font-size:12px;color:#7a90b0;line-height:1.5;">PRP + 2 недели покоя — пройдено. НПВС не пить ~4 недели после укола (до ~середины ноября, уже прошло), при боли парацетамол и холод.</div>
+          </div>
+          <div style="background:#111827;border-radius:8px;padding:10px 12px;display:flex;gap:10px;">
+            <div style="font-size:10px;color:#3b82f6;font-family:'JetBrains Mono',monospace;min-width:52px;padding-top:1px;">▶ Сейчас</div>
+            <div style="font-size:12px;color:#7a90b0;line-height:1.5;">Эксцентрика ежедневно: гантеля 0.5 кг, предплечье на столе, медленно опускать кисть на 3 счёта → поднимать здоровой рукой. 3×15, 2 р/день. Через 2 недели — 1 кг. Боль не выше 3/10.</div>
+          </div>
+          <div style="background:#111827;border-radius:8px;padding:10px 12px;display:flex;gap:10px;">
+            <div style="font-size:10px;color:#3b82f6;font-family:'JetBrains Mono',monospace;min-width:52px;padding-top:1px;">~26.11</div>
+            <div style="font-size:12px;color:#7a90b0;line-height:1.5;">6 недель: сравнить боль со стартовыми цифрами, решить с врачом про 2-ю PRP. Итог курса — через 3 месяца (январь 2027).</div>
+          </div>
+          <div style="background:#111827;border-radius:8px;padding:10px 12px;display:flex;gap:10px;">
+            <div style="font-size:10px;color:#f59e0b;font-family:'JetBrains Mono',monospace;min-width:52px;padding-top:1px;">Если нет</div>
+            <div style="font-size:12px;color:#7a90b0;line-height:1.5;">Повторная PRP → ботулотоксин → в крайнем случае артроскопическая чистка. Сразу к врачу: локоть красный, горячий, температура.</div>
+          </div>
+        </div>
+        <div style="margin-top:10px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.15);border-radius:8px;padding:10px 12px;">
+          <div style="font-size:11px;color:#34d399;font-weight:500;margin-bottom:3px;">Прогноз</div>
+          <div style="font-size:12px;color:#7a90b0;">Хороший результат примерно у 6–7 из 10. Пока нельзя: бокс, штанга, подтягивания, отжимания, гребной тренажёр.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KNEE -->
+  <div style="background:#0d1420;border:1px solid #1e2d45;border-radius:14px;overflow:hidden;margin-bottom:16px;">
+    <div style="background:rgba(245,158,11,0.06);border-bottom:1px solid #1e2d45;padding:16px 20px;display:flex;align-items:center;gap:12px;">
+      <div style="width:32px;height:32px;border-radius:8px;background:rgba(245,158,11,0.15);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">🦵</div>
+      <div style="flex:1;">
+        <div style="font-size:15px;font-weight:600;">Правое колено — гонартроз 1° (Kellgren-Lawrence)</div>
+        <div style="font-size:12px;color:#7a90b0;margin-top:2px;">Рентген + УЗИ 23–24.07.2026 · Медси Одинцово · Важная новость: хрящ на УЗИ в норме!</div>
+      </div>
+      <div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);color:#34d399;font-size:11px;padding:3px 10px;border-radius:20px;">✅ Поймано вовремя</div>
+    </div>
+    <div style="padding:20px;">
+
+      <!-- Key finding box -->
+      <div style="background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.15);border-radius:10px;padding:14px;margin-bottom:16px;">
+        <div style="font-size:12px;font-weight:600;color:#34d399;margin-bottom:8px;">🔑 Ключевая находка: два обследования дают разную картину</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div>
+            <div style="font-size:10px;color:#3a5070;letter-spacing:1px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:6px;">Рентген 23.07.2026</div>
+            <div style="font-size:12px;color:#fbbf24;line-height:1.7;">Щель медиально: <b>4.5 мм</b> (норма 5–7 мм)<br>Щель латерально: <b>5.5 мм</b> (норма)<br>Мелкие остеофиты по медиальному контуру<br>→ Гонартроз 1° по Kellgren-Lawrence</div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:#3a5070;letter-spacing:1px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:6px;">УЗИ 24.07.2026 (на след.день!)</div>
+            <div style="font-size:12px;color:#34d399;line-height:1.7;">Хрящ медиально: <b>2.2 мм</b> ✓<br>Хрящ центр: <b>3.0 мм</b> ✓<br>Хрящ латерально: <b>2.3 мм</b> ✓<br>Связки, мениски — норма. Жидкости нет.<br>→ Структурных нарушений не выявлено</div>
+          </div>
+        </div>
+        <div style="margin-top:10px;font-size:12px;color:#7a90b0;">Рентген видит кость (остеофиты, уплотнение). УЗИ видит хрящ (мягкие ткани). Хрящ пока в норме — это лучший возможный момент для профилактики.</div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div>
+          <div style="font-size:10px;color:#3a5070;letter-spacing:1.5px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:8px;">Куда идти</div>
+          <div style="background:#111827;border-radius:10px;padding:14px;margin-bottom:8px;">
+            <div style="font-size:13px;font-weight:600;color:#e8edf5;margin-bottom:4px;">Дикуля Беляево — Широков Д.Л.</div>
+            <div style="font-size:12px;color:#7a90b0;line-height:1.6;">Артроз 1° — стандартный профиль клиники. Физио, ЛФК под контролем, при необходимости инъекции. Принять и маму с гонартрозом 3° за один визит.</div>
+            <div style="margin-top:10px;">
+              <a href="tel:+74957792525" style="background:#3b82f6;color:white;text-decoration:none;font-size:11px;padding:5px 12px;border-radius:6px;font-weight:500;">📞 +7 (495) 779-25-25</a>
+              <div style="font-size:11px;color:#4a6080;margin-top:6px;">ул. Миклухо-Маклая, 44А</div>
+            </div>
+          </div>
+          <div style="background:#111827;border-radius:10px;padding:14px;">
+            <div style="font-size:11px;color:#7a90b0;line-height:1.6;">Если боль держится — обсудить с ортопедом PRP или гиалуронку. ProДвижение больше не вариант: ~40 занятий без результата, идёт спор о возврате денег.</div>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:10px;color:#3a5070;letter-spacing:1.5px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:8px;">Что делать</div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <div style="background:#111827;border-radius:8px;padding:9px 12px;display:flex;gap:8px;align-items:flex-start;">
+              <span style="font-size:14px;flex-shrink:0;">🏊</span>
+              <div style="font-size:12px;color:#7a90b0;line-height:1.5;"><b style="color:#e8edf5;">Плавание</b> — главное. Разгружает сустав, укрепляет мышцы бедра без ударной нагрузки.</div>
+            </div>
+            <div style="background:#111827;border-radius:8px;padding:9px 12px;display:flex;gap:8px;align-items:flex-start;">
+              <span style="font-size:14px;flex-shrink:0;">🦵</span>
+              <div style="font-size:12px;color:#7a90b0;line-height:1.5;"><b style="color:#e8edf5;">Квадрицепс ежедневно:</b> разгибание ноги сидя на стуле — 3×15, медленно. Квадрицепс = природный корсет для колена.</div>
+            </div>
+            <div style="background:#111827;border-radius:8px;padding:9px 12px;display:flex;gap:8px;align-items:flex-start;">
+              <span style="font-size:14px;flex-shrink:0;">⚖️</span>
+              <div style="font-size:12px;color:#7a90b0;line-height:1.5;"><b style="color:#e8edf5;">−10 кг</b> = самое эффективное лечение артроза. Каждый −1 кг снимает 4–6 кг нагрузки при каждом шаге.</div>
+            </div>
+            <div style="background:#111827;border-radius:8px;padding:9px 12px;display:flex;gap:8px;align-items:flex-start;">
+              <span style="font-size:14px;flex-shrink:0;">🥛</span>
+              <div style="font-size:12px;color:#7a90b0;line-height:1.5;"><b style="color:#e8edf5;">Коллаген 10 г/день</b> + витамин C. Доказанный эффект при артрозе через 3 месяца приёма.</div>
+            </div>
+            <div style="background:#111827;border-radius:8px;padding:9px 12px;display:flex;gap:8px;align-items:flex-start;">
+              <span style="font-size:14px;flex-shrink:0;">🚴</span>
+              <div style="font-size:12px;color:#7a90b0;line-height:1.5;"><b style="color:#e8edf5;">Велик только по ровному</b> — лёгкое сопротивление, каденс 80–90 об/мин. Горы и высокое усилие запрещены.</div>
+            </div>
+            <div style="background:#111827;border-radius:8px;padding:9px 12px;display:flex;gap:8px;align-items:flex-start;">
+              <span style="font-size:14px;flex-shrink:0;">🩺</span>
+              <div style="font-size:12px;color:#7a90b0;line-height:1.5;"><b style="color:#e8edf5;">Контроль рентгена</b> через 12 месяцев. Динамика покажет остановилось ли прогрессирование.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ANKLE -->
+  <div style="background:#0d1420;border:1px solid #1e2d45;border-radius:14px;overflow:hidden;margin-bottom:16px;">
+    <div style="background:rgba(245,158,11,0.05);border-bottom:1px solid #1e2d45;padding:14px 20px;display:flex;align-items:center;gap:12px;">
+      <div style="width:32px;height:32px;border-radius:8px;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">🦶</div>
+      <div style="flex:1;">
+        <div style="font-size:15px;font-weight:600;">Правый голеностоп — артроз 2°</div>
+        <div style="font-size:12px;color:#7a90b0;margin-top:2px;">МРТ 12.05.2025 · Щель 2.0мм (норма 3.0мм) · Хрящ истончён</div>
+      </div>
+      <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);color:#fbbf24;font-size:11px;padding:3px 10px;border-radius:20px;">🟠 Стабилизировать</div>
+    </div>
+    <div style="padding:16px 20px;display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <div>
+        <div style="font-size:12px;color:#7a90b0;line-height:1.7;background:#111827;border-radius:8px;padding:12px;">
+          Суставная щель 2.0мм при норме 3.0мм. Хрящ истончён и склерозирован — это уже 2-я степень. Хрящ не восстановится, но прогрессирование можно остановить. Связки целы.<br><br>
+          <b style="color:#fbbf24;">Отличие от колена:</b> там хрящ пока цел (УЗИ норма), здесь уже повреждён. Разные тактики.
+        </div>
+      </div>
+      <div>
+        <div style="display:flex;flex-direction:column;gap:5px;">
+          <div style="background:#111827;border-radius:7px;padding:8px 12px;font-size:12px;color:#7a90b0;">🏊 Плавание — разгрузка голеностопа</div>
+          <div style="background:#111827;border-radius:7px;padding:8px 12px;font-size:12px;color:#7a90b0;">👟 Ортопедические стельки по слепку (3–7 тыс)</div>
+          <div style="background:#111827;border-radius:7px;padding:8px 12px;font-size:12px;color:#7a90b0;">🥛 Коллаген + глюкозамин + хондроитин</div>
+          <div style="background:#111827;border-radius:7px;padding:8px 12px;font-size:12px;color:#7a90b0;">💉 Гиалуронка или PRP при обострении</div>
+          <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.15);border-radius:7px;padding:8px 12px;font-size:12px;color:#f87171;">🚫 Бокс, бег, прыжки, горные маршруты</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- QUICK SUMMARY -->
+  <div style="background:#0d1420;border:1px solid #1e2d45;border-radius:14px;padding:20px;">
+    <div style="font-size:14px;font-weight:600;margin-bottom:14px;">📋 Итоговый порядок действий</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+      <div style="background:#111827;border-radius:10px;padding:14px;border-left:3px solid #ef4444;">
+        <div style="font-size:10px;color:#f87171;letter-spacing:1px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:6px;">На этой неделе</div>
+        <div style="font-size:12px;color:#7a90b0;line-height:1.7;">❤️ ЭКГ + кардиолог по ДМС<br>🩸 Гастроэнтеролог: капсула или ЭГДС под седацией, тест на хеликобактер<br>📏 ~26.11: оценка локтя через 6 нед</div>
+      </div>
+      <div style="background:#111827;border-radius:10px;padding:14px;border-left:3px solid #f59e0b;">
+        <div style="font-size:10px;color:#fbbf24;letter-spacing:1px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:6px;">В ближайший месяц</div>
+        <div style="font-size:12px;color:#7a90b0;line-height:1.7;">😴 Сомнолог: аппарат или капа<br>👃 ЛОР: эффект Разо<br>🦵 Дикуля — колено + голеностоп<br>🧪 Вит D, B12, АТ-ТПО, ГГТ, гепатиты</div>
+      </div>
+      <div style="background:#111827;border-radius:10px;padding:14px;border-left:3px solid #10b981;">
+        <div style="font-size:10px;color:#34d399;letter-spacing:1px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:6px;">Ежедневно</div>
+        <div style="font-size:12px;color:#7a90b0;line-height:1.7;">💪 Эксцентрика локоть 3×15 × 2р<br>🦵 Квадрицепс 3×15 + кор<br>👅 Миотерапия глотки<br>🏊 Плавание 3–4 р/нед<br>💊 Витамин D + коллаген с вит C</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+
+<!-- ===== TAB 5: PLAN ===== -->
+<div class="panel" id="tab-plan">
+<div class="plan-wrap">
+
+  <div class="plan-header">
+    <div style="font-size:11px;color:#06b6d4;letter-spacing:2px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:8px">БЛИЖАЙШИЙ МЕСЯЦ</div>
+    <div class="plan-h1">📅 План на конец ноября – декабрь 2026</div>
+    <div class="plan-sub">Костюков П.И. · 4 направления · Обновлено 21.11.2026 по медкарте от 20.11</div>
+  </div>
+
+  <!-- DIRECTION CARDS -->
+  <div class="direction-strip">
+    <div class="dir-card" style="border-color:rgba(239,68,68,0.3)">
+      <div class="dir-ico">🩸</div>
+      <div class="dir-title">ЖКТ — скрытая кровь</div>
+      <div class="dir-status" style="background:rgba(239,68,68,0.1);color:#f87171;">🔴 Приоритет #1</div>
+      <div class="dir-items">
+        <div class="dir-item now">⚡ Узнать итог приёма 20.10 у гастроэнтеролога</div>
+        <div class="dir-item now">🔬 Капсульная эндоскопия или ЭГДС под седацией</div>
+        <div class="dir-item soon">🫁 Дыхательный тест на хеликобактер (отмену Разо решает врач)</div>
+        <div class="dir-item soon">🧪 ГГТ, липиды, гепатиты B и C (АЛТ 51)</div>
+        <div class="dir-item daily">💊 Разо 20 мг по схеме, самому не бросать</div>
+      </div>
+    </div>
+    <div class="dir-card" style="border-color:rgba(239,68,68,0.3)">
+      <div class="dir-ico">❤️</div>
+      <div class="dir-title">Сердце и сон</div>
+      <div class="dir-status" style="background:rgba(239,68,68,0.1);color:#f87171;">🔴 Не закрыто</div>
+      <div class="dir-items">
+        <div class="dir-item now">⚡ ЭКГ + кардиолог по ДМС после эпизода 13.09</div>
+        <div class="dir-item soon">😴 Сомнолог: решить PAP-аппарат или капа</div>
+        <div class="dir-item daily">👅 Миотерапия глотки 6 нед</div>
+        <div class="dir-item daily">🛏 Спать на боку, без алкоголя за 3 ч</div>
+        <div class="dir-item soon">♨️ После бассейна 30–40 мин отдыха, потом баня</div>
+      </div>
+    </div>
+    <div class="dir-card" style="border-color:rgba(245,158,11,0.3)">
+      <div class="dir-ico">💪</div>
+      <div class="dir-title">Локоть после PRP</div>
+      <div class="dir-status" style="background:rgba(245,158,11,0.1);color:#fbbf24;">🟠 Восстановление</div>
+      <div class="dir-items">
+        <div class="dir-item daily">🔄 Эксцентрика 0,5 кг 3×15 × 2р/день</div>
+        <div class="dir-item now">📏 ~26.11: оценка 6 нед по стартовым цифрам</div>
+        <div class="dir-item soon">💉 Решить про 2-ю PRP с Сапежниковым</div>
+        <div class="dir-item soon">🏋️ Через 2 нед эксцентрики — 1 кг</div>
+        <div class="dir-item soon">❌ Хват, штанга, подтягивания — нельзя</div>
+      </div>
+    </div>
+    <div class="dir-card" style="border-color:rgba(139,92,246,0.3)">
+      <div class="dir-ico">🦵</div>
+      <div class="dir-title">Колено, стопа, спина</div>
+      <div class="dir-status" style="background:rgba(139,92,246,0.1);color:#a78bfa;">🟣 Поддержка</div>
+      <div class="dir-items">
+        <div class="dir-item now">📞 Дикуля Беляево +7(495)779-25-25</div>
+        <div class="dir-item now">👟 Стельки ортопедические по слепку</div>
+        <div class="dir-item daily">💪 Квадрицепс 3×15 + кор 10–15 мин</div>
+        <div class="dir-item daily">🏊 Плавание 3–4 р/нед, без брасса</div>
+        <div class="dir-item soon">❌ Бег, прыжки, велосипед в гору</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEGEND -->
+  <div class="plan-legend">
+    <div class="leg"><div class="leg-dot" style="background:#3b82f6"></div>Сейчас</div>
+    <div class="leg"><div class="leg-dot" style="background:#f59e0b"></div>Скоро</div>
+    <div class="leg"><div class="leg-dot" style="background:#10b981"></div>Ежедневно</div>
+  </div>
+
+  <!-- WEEK-BY-WEEK -->
+  <div style="font-size:14px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px">
+    <span>📆 По неделям</span>
+    <span style="font-size:11px;color:#7a90b0;font-weight:400">ноябрь–декабрь 2026</span>
+  </div>
+  <div class="week-grid">
+
+    <div class="week-col">
+      <div class="week-head" style="color:#3b82f6;background:rgba(59,130,246,0.06)">
+        НЕД 1 · 23–29 ноя
+      </div>
+      <div class="week-body">
+        <div class="wi">
+          <div class="wi-ico">❤️</div>
+          <div class="wi-text"><strong>ЭКГ + кардиолог</strong>По ДМС (Медси). Рассказать про эпизод 13.09 и ЭКГ 2021</div>
+        </div>
+        <div class="wi">
+          <div class="wi-ico">🩸</div>
+          <div class="wi-text"><strong>Гастроэнтеролог</strong>Итог приёма 20.10, запись на капсулу или ЭГДС под седацией</div>
+        </div>
+        <div class="wi">
+          <div class="wi-ico">📏</div>
+          <div class="wi-text"><strong>Локоть: 6 недель (~26.11)</strong>Бутылка 1,5 л, рукопожатие, нажатие — сравнить со стартом</div>
+        </div>
+        <div class="wi">
+          <div class="wi-ico">🔄</div>
+          <div class="wi-text"><strong>Эксцентрика</strong>0,5 кг, 3×15, 2 р/день. Боль не выше 3/10</div>
+        </div>
+        <div class="wi">
+          <div class="wi-ico">🏊</div>
+          <div class="wi-text"><strong>Плавание</strong>3 р/нед — кроль или на спине, без брасса</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="week-col">
+      <div class="week-head" style="color:#f59e0b;background:rgba(245,158,11,0.06)">
+        НЕД 2 · 30 ноя–6 дек
+      </div>
+      <div class="week-body">
+        <div class="wi">
+          <div class="wi-ico">💉</div>
+          <div class="wi-text"><strong>Решение про 2-ю PRP</strong>С Сапежниковым по итогам оценки 6 недель</div>
+        </div>
+        <div class="wi">
+          <div class="wi-ico">🧪</div>
+          <div class="wi-text"><strong>Один забор крови</strong>Вит D, B12, АТ-ТПО, ГГТ, липиды, гепатиты B и C</div>
+        </div>
+        <div class="wi">
+          <div class="wi-ico">🫁</div>
+          <div class="wi-text"><strong>Тест на хеликобактер</strong>Если врач назначил — когда отменить Разо, решает он</div>
+        </div>
+        <div class="wi">
+          <div class="wi-ico">🏋️</div>
+          <div class="wi-text"><strong>Эксцентрика 1 кг</strong>Если 0,5 кг идёт без боли выше 3/10</div>
+        </div>
+        <div class="wi">
+          <div class="wi-ico">👅</div>
+          <div class="wi-text"><strong>Миотерапия глотки</strong>Каждый день, 6 недель</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="week-col">
+      <div class="week-head" style="color:#8b5cf6;background:rgba(139,92,246,0.06)">
+        НЕД 3 · 7–13 дек
+      </div>
+      <div class="week-body">
+        <div class="wi">
+          <div class="wi-ico">😴</div>
+          <div class="wi-text"><strong>Сомнолог</strong>Решить: PAP-аппарат или капа. При сатурации до 82% не тянуть</div>
+        </div>
+        <div class="wi">
+          <div class="wi-ico">👃</div>
+          <div class="wi-text"><strong>ЛОР</strong>Отчитаться об эффекте Разо, обсудить перегородку и раковины</div>
+        </div>
+        <div class="wi">
+          <div class="wi-ico">🦵</div>
+          <div class="wi-text"><strong>Дикуля — консультация</strong>Широков Д.Л. Колено + голеностоп</div>
+        </div>
+        <div class="wi">
+          <div class="wi-ico">👟</div>
+          <div class="wi-text"><strong>Стельки</strong>Изготовить по слепку</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="week-col">
+      <div class="week-head" style="color:#10b981;background:rgba(16,185,129,0.06)">
+        НЕД 4 · 14–20 дек
+      </div>
+      <div class="week-body">
+        <div class="wi">
+          <div class="wi-ico">🔬</div>
+          <div class="wi-text"><strong>Эндоскопия</strong>Капсульная или ЭГДС под седацией — если записался</div>
+        </div>
+        <div class="wi">
+          <div class="wi-ico">📋</div>
+          <div class="wi-text"><strong>Результаты анализов</strong>Показать терапевту: гематокрит, АЛТ, D, B12</div>
+        </div>
+        <div class="wi">
+          <div class="wi-ico">💸</div>
+          <div class="wi-text"><strong>ProДвижение</strong>Решить: Росздравнадзор, суд или закрыть вопрос</div>
+        </div>
+        <div class="wi">
+          <div class="wi-ico">⚖️</div>
+          <div class="wi-text"><strong>Вес</strong>Дефицит 300–500 ккал, −2–3 кг в месяц</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- DAILY CHECKLIST -->
+  <div class="daily-checklist">
+    <div class="dl-title">✅ Ежедневный чек-лист</div>
+    <div class="dl-grid">
+      <div class="dl-block">
+        <div class="dl-block-title">💪 Движение</div>
+        <div class="dl-row">
+          <div class="dl-check" onclick="this.classList.toggle('checked');this.textContent=this.classList.contains('checked')?'✓':''"></div>
+          <div class="dl-label">Эксцентрика локоть 3×15 утро</div>
+        </div>
+        <div class="dl-row">
+          <div class="dl-check" onclick="this.classList.toggle('checked');this.textContent=this.classList.contains('checked')?'✓':''"></div>
+          <div class="dl-label">Эксцентрика локоть 3×15 вечер</div>
+        </div>
+        <div class="dl-row">
+          <div class="dl-check" onclick="this.classList.toggle('checked');this.textContent=this.classList.contains('checked')?'✓':''"></div>
+          <div class="dl-label">Квадрицепс 3×15 + кор</div>
+        </div>
+        <div class="dl-row">
+          <div class="dl-check" onclick="this.classList.toggle('checked');this.textContent=this.classList.contains('checked')?'✓':''"></div>
+          <div class="dl-label">Плавание (3–4 р/нед)</div>
+        </div>
+      </div>
+      <div class="dl-block">
+        <div class="dl-block-title">💊 Препараты</div>
+        <div class="dl-row">
+          <div class="dl-check" onclick="this.classList.toggle('checked');this.textContent=this.classList.contains('checked')?'✓':''"></div>
+          <div class="dl-label">Разо 20 мг утром натощак</div>
+        </div>
+        <div class="dl-row">
+          <div class="dl-check" onclick="this.classList.toggle('checked');this.textContent=this.classList.contains('checked')?'✓':''"></div>
+          <div class="dl-label">Авамис в нос</div>
+        </div>
+        <div class="dl-row">
+          <div class="dl-check" onclick="this.classList.toggle('checked');this.textContent=this.classList.contains('checked')?'✓':''"></div>
+          <div class="dl-label">Витамин D 5000 МЕ</div>
+        </div>
+        <div class="dl-row">
+          <div class="dl-check" onclick="this.classList.toggle('checked');this.textContent=this.classList.contains('checked')?'✓':''"></div>
+          <div class="dl-label">Коллаген + витамин C</div>
+        </div>
+      </div>
+      <div class="dl-block">
+        <div class="dl-block-title">🌙 Режим (рефлюкс, апноэ)</div>
+        <div class="dl-row">
+          <div class="dl-check" onclick="this.classList.toggle('checked');this.textContent=this.classList.contains('checked')?'✓':''"></div>
+          <div class="dl-label">Не есть за 3 ч до сна</div>
+        </div>
+        <div class="dl-row">
+          <div class="dl-check" onclick="this.classList.toggle('checked');this.textContent=this.classList.contains('checked')?'✓':''"></div>
+          <div class="dl-label">Миотерапия глотки</div>
+        </div>
+        <div class="dl-row">
+          <div class="dl-check" onclick="this.classList.toggle('checked');this.textContent=this.classList.contains('checked')?'✓':''"></div>
+          <div class="dl-label">Не пить кофе / алкоголь вечером</div>
+        </div>
+        <div class="dl-row">
+          <div class="dl-check" onclick="this.classList.toggle('checked');this.textContent=this.classList.contains('checked')?'✓':''"></div>
+          <div class="dl-label">Спать на боку, отбой до 23:00</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTACTS -->
+  <div style="background:#0d1420;border:1px solid #1e2d45;border-radius:12px;padding:18px;margin-bottom:28px">
+    <div style="font-size:14px;font-weight:600;margin-bottom:12px">📞 Телефоны на месяц</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+      <div style="background:#111827;border-radius:8px;padding:12px;border-left:3px solid #ef4444">
+        <div style="font-size:11px;color:#f87171;margin-bottom:4px;font-family:'JetBrains Mono',monospace">ЛОКОТЬ · PRP</div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:2px">СМ-Клиника, Солнцево</div>
+        <div style="font-size:12px;color:#7a90b0">Сапежников В.В.</div>
+        <div style="font-size:11px;color:#4a6080;margin-top:4px">Запасной: Стопартроз +7 (495) 134-03-41</div>
+      </div>
+      <div style="background:#111827;border-radius:8px;padding:12px;border-left:3px solid #f59e0b">
+        <div style="font-size:11px;color:#fbbf24;margin-bottom:4px;font-family:'JetBrains Mono',monospace">КОЛЕНО + СТОПА</div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:2px">Дикуля Беляево</div>
+        <div style="font-size:12px;color:#7a90b0">+7 (495) 779-25-25</div>
+        <div style="font-size:11px;color:#4a6080;margin-top:4px">Широков Д.Л.</div>
+      </div>
+      <div style="background:#111827;border-radius:8px;padding:12px;border-left:3px solid #06b6d4">
+        <div style="font-size:11px;color:#22d3ee;margin-bottom:4px;font-family:'JetBrains Mono',monospace">ЖКТ · СЕРДЦЕ · АНАЛИЗЫ</div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:2px">По ДМС (Медси)</div>
+        <div style="font-size:12px;color:#7a90b0">Гастроэнтеролог, кардиолог, ЭКГ, анализы</div>
+        <div style="font-size:11px;color:#4a6080;margin-top:4px">Не платить отдельно за то, что покрывает ДМС</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+
+<script>
+// ── i18n ──────────────────────────────────────────────────────────────────────
+let currentLang = 'ru';
+
+const i18n = {
+  ru: {
+    // tabs
+    'tab-char': '⚔️ Мой персонаж',
+    'tab-about': '🏠 О системе',
+    'tab-treat': '💉 Лечение',
+    'tab-plan': '📅 План',
+    'tab-links': '🔗 Связи',
+    'tab-docs': '🗂 Документы',
+    // sidebar
+    'lbl-stats': 'Характеристики',
+    'lbl-debuffs': 'Активные дебаффы',
+    'lbl-ach': 'Достижения',
+    'stat-vit': 'Жизнь',
+    'stat-str': 'Сила',
+    'stat-int': 'Интеллект',
+    'stat-end': 'Выносливость',
+    'stat-rec': 'Восстановление',
+    'stat-nut': 'Питание',
+    // zone default
+    'zd-title-def': 'Нажмите зону для деталей',
+    'zd-text-def': 'Нажмите на светящуюся точку, чтобы узнать подробности.',
+    // zones
+    'elbow': {title:'🔴 Правый локоть — эпикондилит, после PRP', text:'Хронический тендиноз, 3-й год. PRP сделана 14–15.10.2026 (СМ-Клиника, Сапежников В.В.). 2 недели покоя прошли, сейчас эксцентрика 0,5 кг 3×15 дважды в день. Сторону (медиальный/латеральный) уточнить у врача.', action:'→ Оценка через 6 нед (~26.11) по стартовым цифрам боли · итог в январе 2027'},
+    'lumbar': {title:'🟠 Поясница — грыжи L4-L5, L5-S1', text:'МРТ 06.2025: L4-L5 0,3 см справа, L5-S1 0,4 см слева, корешки деформированы. Нейрохирург: операция не нужна. Брасс, становая и скручивания под запретом.', action:'→ Плавание + кор каждый день · МРТ через 6–12 мес'},
+    'knee': {title:'🟠 Правое колено — гонартроз 1°', text:'Рентген 23.07.2026: щель 4,5 мм медиально, мелкие остеофиты. УЗИ 24.07: хрящ, связки и мениски в норме. Пойман рано.', action:'→ Квадрицепс 3×15 · велосипед по ровному · Дикуля, Беляево'},
+    'ankle': {title:'🟠 Правый голеностоп — артроз 2°', text:'МРТ 12.05.2025: щель 2,0 мм (норма до 3,0), хрящ истончён, связки и ахилл целы. Хрящ не восстановится, цель — остановить прогрессирование.', action:'→ Стельки по слепку · без ударной нагрузки · Дикуля'},
+    'neck': {title:'🟡 Шея — C5-C6, листез C2-C3', text:'МРТ 06.2025: протрузия C5-C6 0,15 см, корешки свободны. Гемангиомы позвонков доброкачественные.', action:'→ Монитор на уровне глаз · перерыв каждые 45 мин'},
+    'stomach': {title:'🔴 ЖКТ — скрытая кровь в кале', text:'07.2026: скрытая кровь положительная (Hb+, Hb/Hp+), анемии нет. Гастропатия на ЭГДС 2024. Эндоскопия 08.10 не состоялась из-за рвотного рефлекса. Источник не найден.', action:'→ Капсульная эндоскопия или ЭГДС под седацией · тест на хеликобактер'},
+    'thyroid': {title:'🔵 Щитовидная железа', text:'ТТГ 1,054 и Т4 в норме. УЗИ 03.2026: узлов нет, умеренные изменения. АТ-ТПО назначен, но не сдан.', action:'→ АТ-ТПО при следующем заборе крови'},
+    'wrist': {title:'🟡 Запястье — начальный артроз', text:'МРТ 12.05.2025: патологии нет, TFCC цел, хрящ истончён, субхондральный склероз. УЗИ 06.2024: изменения по типу артроза. Туннельный синдром исключён (ЭНМГ, УЗИ нерва).', action:'→ Без инъекций · нейтральная кисть, эргономичная мышь'},
+    'heart': {title:'🔴 Сердце — эпизод 13.09, ЭКГ не сделана', text:'После бассейна сразу баня: 1–2 дня давление в груди, ночью тянуло левую руку. ЭКГ после эпизода не зафиксирована. ЭКГ 2021: ранняя реполяризация.', action:'→ ЭКГ + кардиолог по ДМС · при давлении в груди > 15 мин — 112'},
+    'apnea': {title:'🔴 Сон — апноэ лёгкой степени', text:'Мониторинг 24.04: AHI 12,1, сатурация до 82%. Сомнолог 30.09: PAP-терапия или капа + миотерапия глотки. Гематокрит повышен дважды.', action:'→ Решить с сомнологом про аппарат · сон на боку · повтор через 3–6 мес'},
+    // right panel
+    'lbl-edit': 'Редактировать',
+    'btn-recalc': 'Пересчитать персонажа ↻',
+    'lbl-quests': 'Задания на сегодня',
+    // quests
+    'q1': 'Бассейн — кроль или спина',
+    'q2': 'Сон 7+ часов',
+    'q3': 'Эксцентрика локоть (0.5 кг × 15)',
+    'q4': 'Планка 30 сек × 3',
+    'q5': 'Разо 20 мг утром',
+    'q6': 'Витамин D 5000 МЕ',
+    'q7': 'Магний B6 вечером',
+    // params
+    'p-vd': 'Витамин D',
+    'p-wt': 'Вес',
+    'p-sw': 'Плавание',
+    'p-sl': 'Сон',
+    'p-el': 'Боль в локте',
+    'p-kn': 'Боль в колене',
+    'p-st': 'Стресс',
+    'p-en': 'Энергия',
+  },
+  en: {
+    'tab-char': '⚔️ My Character',
+    'tab-about': '🏠 About',
+    'tab-treat': '💉 Treatment',
+    'tab-plan': '📅 Plan',
+    'tab-links': '🔗 Links',
+    'tab-docs': '🗂 Records',
+    'lbl-stats': 'Character stats',
+    'lbl-debuffs': 'Active debuffs',
+    'lbl-ach': 'Achievements',
+    'stat-vit': 'Vitality',
+    'stat-str': 'Strength',
+    'stat-int': 'Intellect',
+    'stat-end': 'Endurance',
+    'stat-rec': 'Recovery',
+    'stat-nut': 'Nutrition',
+    'zd-title-def': 'Click a zone to see details',
+    'zd-text-def': "Tap any glowing point on the body to see what's happening there.",
+    'elbow': {title:'🔴 Right Elbow — Epicondylitis, post-PRP', text:'Chronic tendinosis, year 3. PRP done ~18 Oct 2026. Two weeks of rest are over; now eccentric exercises 0.5 kg 3×15 twice a day.', action:'→ 6-week check (~29 Nov) against baseline pain scores · final result Jan 2027'},
+    'lumbar': {title:'🟠 Lower Back — L4-L5, L5-S1 Herniation', text:'MRI 06.2025: 0.3 cm and 0.4 cm herniations, nerve roots deformed. Neurosurgeon: no surgery needed.', action:'→ Swimming + daily core · MRI in 6–12 months'},
+    'knee': {title:'🟠 Right Knee — Gonarthrosis 1°', text:'X-ray 23 Jul 2026: medial space 4.5 mm, small osteophytes. Ultrasound: cartilage, ligaments, menisci normal. Caught early.', action:'→ Quad exercises · flat cycling only · Dikul Center'},
+    'ankle': {title:'🟠 Right Ankle — Arthrosis 2°', text:'MRI 12 May 2025: joint space 2.0 mm (norm 3.0), thinned cartilage, ligaments intact.', action:'→ Custom insoles · no impact loads'},
+    'neck': {title:'🟡 Neck — C5-C6, C2-C3 listhesis', text:'MRI 06.2025: C5-C6 protrusion 0.15 cm, roots free. Benign vertebral hemangiomas.', action:'→ Monitor at eye level · break every 45 min'},
+    'stomach': {title:'🔴 GI — occult blood in stool', text:'07.2026: occult blood positive, no anemia. Gastropathy on 2024 EGD. Endoscopy on 8 Oct failed due to gag reflex. Source not found.', action:'→ Capsule endoscopy or sedated EGD · H. pylori breath test'},
+    'thyroid': {title:'🔵 Thyroid Gland', text:'TSH and T4 normal. Ultrasound 03.2026: no nodules. Anti-TPO ordered but not tested.', action:'→ Anti-TPO at next blood draw'},
+    'wrist': {title:'🟡 Wrist — early arthrosis', text:'MRI 12 May 2025: TFCC intact, thinned cartilage. Carpal tunnel ruled out (EMG, nerve ultrasound).', action:'→ No injections · ergonomic mouse'},
+    'heart': {title:'🔴 Heart — 13 Sep episode, no ECG yet', text:'Pool then sauna: 1–2 days of chest pressure, left arm pulling at night. No ECG recorded afterwards.', action:'→ ECG + cardiologist · chest pressure > 15 min — call 112'},
+    'apnea': {title:'🔴 Sleep — mild apnea', text:'Sleep study 24 Apr: AHI 12.1, SpO2 down to 82%. Sleep doctor 30 Sep: PAP or oral appliance + throat exercises.', action:'→ Decide on device · side sleeping · retest in 3–6 months'},
+    'lbl-edit': 'Edit your stats',
+    'btn-recalc': 'Recalculate character ↻',
+    'lbl-quests': "Today's quests",
+    'q1': 'Pool — crawl or backstroke',
+    'q2': 'Sleep 7+ hours',
+    'q3': 'Eccentric elbow (0.5 kg × 15)',
+    'q4': 'Plank 30 sec × 3',
+    'q5': 'Razo 20 mg morning',
+    'q6': 'Vitamin D 5000 IU',
+    'q7': 'Magnesium B6 evening',
+    'p-vd': 'Vitamin D',
+    'p-wt': 'Weight',
+    'p-sw': 'Swimming',
+    'p-sl': 'Sleep',
+    'p-el': 'Elbow pain',
+    'p-kn': 'Knee pain',
+    'p-st': 'Stress',
+    'p-en': 'Energy',
+  }
+};
+
+// Map param id → i18n key
+const paramI18nMap = {vd:'p-vd',wt:'p-wt',sw:'p-sw',sl:'p-sl',el:'p-el',kn:'p-kn',st:'p-st',en:'p-en'};
+
+function toggleLang() {
+  currentLang = currentLang === 'ru' ? 'en' : 'ru';
+  document.getElementById('lang-btn').textContent = currentLang === 'ru' ? 'EN' : 'RU';
+  applyLang();
+}
+
+function applyLang() {
+  const t = i18n[currentLang];
+  // Tabs
+  const tabs = document.querySelectorAll('.tab');
+  const tabMap = {character:'tab-char', landing:'tab-about', treatment:'tab-treat', plan:'tab-plan', links:'tab-links', docs:'tab-docs'};
+  tabs.forEach(tb => { const m = (tb.getAttribute('onclick')||'').match(/switchTab\('(\w+)'/); if (m && tabMap[m[1]] && t[tabMap[m[1]]]) tb.textContent = t[tabMap[m[1]]]; });
+  // Re-attach onclick (lost after textContent) — they're inline so still work
+  // Section labels
+  document.querySelectorAll('.section-label').forEach(el => {
+    const txt = el.textContent.trim();
+    if(txt === 'Характеристики' || txt === 'Character stats') el.textContent = t['lbl-stats'];
+    if(txt === 'Активные дебаффы' || txt === 'Active debuffs') el.textContent = t['lbl-debuffs'];
+    if(txt === 'Достижения' || txt === 'Achievements') el.textContent = t['lbl-ach'];
+  });
+  // Stat labels
+  const statLabels = document.querySelectorAll('.stat-label');
+  const statKeys = ['stat-vit','stat-str','stat-int','stat-end','stat-rec','stat-nut'];
+  statLabels.forEach((el,i) => { if(statKeys[i]) el.textContent = t[statKeys[i]]; });
+  // Zone detail default
+  if(!currentZone) {
+    document.getElementById('zd-title').textContent = t['zd-title-def'];
+    document.getElementById('zd-text').textContent  = t['zd-text-def'];
+  } else {
+    const z = t[currentZone];
+    if(z) {
+      document.getElementById('zd-title').innerHTML = z.title;
+      document.getElementById('zd-text').textContent = z.text;
+      document.getElementById('zd-action').textContent = z.action;
+    }
+  }
+  // Recalc button
+  const rcBtn = document.querySelector('.recalc-btn');
+  if(rcBtn) rcBtn.textContent = t['btn-recalc'];
+  // Section labels (right panel)
+  document.querySelectorAll('.section-label').forEach(el => {
+    const txt = el.textContent.trim();
+    if(txt === 'Редактировать' || txt === 'Edit your stats') el.textContent = t['lbl-edit'];
+    if(txt === 'Задания на сегодня' || txt === "Today's quests") el.textContent = t['lbl-quests'];
+  });
+  // Param editor labels
+  document.querySelectorAll('#param-editor .param-name').forEach(el => {
+    const pid = el.closest('[data-pid]')?.dataset?.pid;
+    if(pid && paramI18nMap[pid]) el.textContent = t[paramI18nMap[pid]];
+  });
+  // Quest items — rebuild
+  buildQuests();
+}
+
+// Store current zone for lang switch
+let currentZone = null;
+</script>
+
+<!-- ====== TAB: LINKS (карта пересечений) ====== -->
+<style>
+#tab-links{background:var(--bg)}
+.lk-wrap{max-width:1360px;margin:0 auto;padding:28px 28px 60px}
+.lk-eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.14em;color:var(--cyan);text-transform:uppercase;margin-bottom:8px}
+.lk-h1{font-size:26px;font-weight:700;margin-bottom:6px}
+.lk-sub{font-size:13px;color:var(--text2);margin-bottom:22px;line-height:1.6;max-width:900px}
+.lk-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px}
+.lk-kpi{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+.lk-kpi b{display:block;font-size:24px;font-weight:700;font-family:'JetBrains Mono',monospace}
+.lk-kpi span{font-size:12px;color:var(--text2)}
+.lk-main{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:start}
+.lk-graph{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:12px 8px 8px;position:relative}
+.lk-graph svg{width:100%;height:auto;display:block}
+.lk-colh{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.12em;fill:var(--text3);text-transform:uppercase}
+.lk-node{cursor:pointer;transition:opacity .2s}
+.lk-node rect{transition:stroke .2s,fill .2s}
+.lk-node:hover rect{stroke-width:2}
+.lk-node text{font-family:'Inter',sans-serif;font-size:12.5px;fill:var(--text);pointer-events:none}
+.lk-node .lk-meta{font-size:10.5px;fill:var(--text2);font-family:'JetBrains Mono',monospace}
+.lk-edge{fill:none;stroke-width:1.6;transition:opacity .2s,stroke-width .2s}
+.lk-dim{opacity:.12}
+.lk-hot{stroke-width:2.6!important}
+.lk-legend{display:flex;flex-wrap:wrap;gap:16px;font-size:11.5px;color:var(--text2);padding:8px 12px 4px}
+.lk-legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.lk-legend .ln{display:inline-block;width:22px;height:0;border-top:2px solid var(--text2);margin-right:6px;vertical-align:3px}
+.lk-legend .ln.d{border-top-style:dashed}
+.lk-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:18px;position:sticky;top:12px;min-height:420px}
+.lk-card h3{font-size:16px;font-weight:700;margin:6px 0 4px}
+.lk-badge{display:inline-block;font-size:10.5px;font-family:'JetBrains Mono',monospace;padding:3px 9px;border-radius:20px;border:1px solid}
+.lk-card .lk-lbl{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--text3);text-transform:uppercase;margin:14px 0 6px}
+.lk-card ul{list-style:none;display:flex;flex-direction:column;gap:5px}
+.lk-card li{font-size:12.5px;color:var(--text);line-height:1.5;padding-left:14px;position:relative}
+.lk-card li::before{content:'';position:absolute;left:0;top:8px;width:6px;height:6px;border-radius:50%;background:var(--border2)}
+.lk-chip{display:inline-block;font-size:11.5px;padding:3px 9px;border-radius:8px;background:var(--bg3);border:1px solid var(--border);margin:0 4px 5px 0;cursor:pointer;color:var(--text)}
+.lk-chip:hover{border-color:var(--blue)}
+.lk-chip small{color:var(--text2);margin-left:4px}
+.lk-todo{background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.25);border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.55;color:#a7f3d0}
+.lk-hint{font-size:12.5px;color:var(--text2);line-height:1.6}
+.lk-sec{margin-top:30px}
+.lk-h2{font-size:18px;font-weight:700;margin-bottom:4px}
+.lk-h2sub{font-size:12.5px;color:var(--text2);margin-bottom:14px}
+.lk-levers{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:8px 6px}
+.lk-lev{display:grid;grid-template-columns:250px 1fr 44px;gap:14px;align-items:center;padding:9px 12px;border-radius:10px;cursor:pointer}
+.lk-lev:hover{background:var(--bg3)}
+.lk-lev .nm{font-size:13px;font-weight:600}
+.lk-lev .nm small{display:block;font-weight:400;font-size:11.5px;color:var(--text2);margin-top:2px}
+.lk-bar{height:22px;background:var(--bg3);border-radius:6px;position:relative;overflow:hidden}
+.lk-bar>div{height:100%;border-radius:6px;background:linear-gradient(90deg,#10b981,#06b6d4)}
+.lk-bar span{position:absolute;left:10px;top:3px;font-size:11px;color:#04221a;font-weight:600;white-space:nowrap;overflow:hidden;right:8px;text-overflow:ellipsis}
+.lk-lev .ct{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:#34d399;text-align:right}
+.lk-cycles{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.lk-cyc{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px}
+.lk-cyc h4{font-size:14px;margin-bottom:10px}
+.lk-steps{display:flex;flex-direction:column;gap:0}
+.lk-step{font-size:12.5px;padding:7px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px}
+.lk-arrow{text-align:center;color:var(--text3);font-size:12px;line-height:16px}
+.lk-loop{font-size:11.5px;color:#fca5a5;margin-top:8px;font-family:'JetBrains Mono',monospace}
+.lk-break{margin-top:10px;font-size:12.5px;color:#a7f3d0;line-height:1.55}
+.lk-gaps{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.lk-gap{display:flex;gap:12px;align-items:flex-start;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px 14px}
+.lk-gap .dot{width:9px;height:9px;border-radius:50%;margin-top:5px;flex:none}
+.lk-gap b{font-size:13px;display:block;margin-bottom:2px}
+.lk-gap span{font-size:12px;color:var(--text2);line-height:1.5}
+.lk-foot{margin-top:26px;font-size:11.5px;color:var(--text3);line-height:1.6}
+@media (max-width:760px){.lk-graph{overflow-x:auto}.lk-graph svg{min-width:900px}.tab-bar{overflow-x:auto}}
+@media (max-width:1100px){.lk-main{grid-template-columns:1fr}.lk-card{position:static}.lk-cycles{grid-template-columns:1fr}.lk-kpis{grid-template-columns:repeat(2,1fr)}.lk-gaps{grid-template-columns:1fr}.lk-lev{grid-template-columns:1fr 44px}.lk-lev .lk-bar{grid-column:1/-1;grid-row:2}}
+</style>
+
+<div class="panel active" id="tab-links">
+<div class="lk-wrap">
+  <div class="lk-eyebrow">// карта пересечений · по документам 2021–2026</div>
+  <div class="lk-h1">🔗 Как связаны мои проблемы</div>
+  <div class="lk-sub">Слева корни, в центре диагнозы и находки из документов, справа то, что от этого страдает в жизни. Нажми на любой блок: подсветится вся цепочка, а справа появится карточка с фактами и тем, что делать. Сплошная линия означает, что связь подтверждена врачом или документом. Пунктир означает гипотезу, которую стоит проверить.</div>
+
+  <div class="hq-alert" style="max-width:none"><span style="font-size:18px">🚩</span><div><b>Главное незакрытое на 21.11:</b> найти источник скрытой крови в кале (капсула или ЭГДС под седацией), сделать ЭКГ после эпизода 13.09, около 26.11 оценить локоть через 6 недель после PRP.</div></div>
+
+  <div class="lk-kpis">
+    <div class="lk-kpi"><b style="color:#f87171">14</b><span>проблем и находок в документах</span></div>
+    <div class="lk-kpi"><b style="color:#a78bfa">7</b><span>общих корней, из которых они растут</span></div>
+    <div class="lk-kpi"><b style="color:#fbbf24">3</b><span>порочных круга, где одно усиливает другое</span></div>
+    <div class="lk-kpi"><b style="color:#34d399">8</b><span>проблем затрагивает один рычаг — снижение веса</span></div>
+  </div>
+
+  <div class="lk-main">
+    <div class="lk-graph">
+      <svg id="lk-svg" viewBox="0 0 1000 760" preserveAspectRatio="xMidYMin meet"></svg>
+      <div class="lk-legend">
+        <span><i style="background:#8b5cf6"></i>Корень</span>
+        <span><i style="background:#ef4444"></i>Срочно</span>
+        <span><i style="background:#f59e0b"></i>Важно</span>
+        <span><i style="background:#eab308"></i>Наблюдать</span>
+        <span><i style="background:#3b82f6"></i>Что страдает</span>
+        <span><span class="ln"></span>подтверждено</span>
+        <span><span class="ln d"></span>гипотеза</span>
+      </div>
+    </div>
+    <div class="lk-card" id="lk-card"></div>
+  </div>
+
+  <div class="lk-sec">
+    <div class="lk-h2">🎯 Рычаги: одно действие, несколько проблем</div>
+    <div class="lk-h2sub">Отсортировано по числу проблем, которые затрагивает действие. Нажми строку, чтобы подсветить их на карте.</div>
+    <div class="lk-levers" id="lk-levers"></div>
+  </div>
+
+  <div class="lk-sec">
+    <div class="lk-h2">🔁 Порочные круги</div>
+    <div class="lk-h2sub">Места, где проблемы подпитывают друг друга. Разорвать круг в одном месте полезнее, чем лечить каждое звено отдельно.</div>
+    <div class="lk-cycles" id="lk-cycles"></div>
+  </div>
+
+  <div class="lk-sec">
+    <div class="lk-h2">🕳 Пробелы: чего не хватает, чтобы картина была полной</div>
+    <div class="lk-h2sub">Без этих данных часть связей на карте остаётся гипотезой.</div>
+    <div class="lk-gaps" id="lk-gaps"></div>
+  </div>
+
+  <div class="lk-foot">Собрано из медицинских документов и заключений 2021–2026 (Медси, Lab4U, МРТ/УЗИ/рентген, ЛОР, сомнолог, гастроэнтеролог), по медкарте от 20.11.2026. Это наглядная сводка для себя и для врача, а не диагноз: связи помечены как подтверждённые или как гипотезы.</div>
+</div>
+</div>
+
+<script>
+(function(){
+const COL={root:'#8b5cf6',red:'#ef4444',orange:'#f59e0b',yellow:'#eab308',out:'#3b82f6'};
+const N=[
+ // ---- КОРНИ ----
+ {id:'weight',col:0,t:'Лишний вес',m:'97 кг · ИМТ 28,3 → цель 78–82',k:'root',
+  facts:['У сомнолога 30.09.2026: рост 185, вес 97 кг, ИМТ 28,34. Цель 78–82 кг','Давит на суставы ног, поясницу, желудок и дыхательные пути ночью','SHBG снижен (11,3), что часто идёт вместе с лишним весом'],
+  todo:'Минус 10 кг даст эффект сразу по 8 направлениям. Плавание + режим еды, без ударных нагрузок.'},
+ {id:'desk',col:0,t:'12+ часов за компьютером',m:'Android-разработчик',k:'root',
+  facts:['Сидячая работа 12+ часов в день','Нагрузка на поясницу и шею','Меньше движения → проще набрать вес'],
+  todo:'Вставать каждые 45 минут, кор каждый день, монитор на уровне глаз.'},
+ {id:'nsaid',col:0,t:'НПВС годами',m:'диклофенак, ксефокам, аркоксиа',k:'root',
+  facts:['Около 3 лет обезболивающих из-за локтя и суставов: диклофенак, лорноксикам, эторикоксиб, кетопрофен','НПВС снижают защиту слизистой желудка','Сама причина приёма — боль в локте с 2023'],
+  todo:'НПВС только коротко и с защитой желудка. 4 недели запрета после PRP прошли, но из-за скрытой крови лучше обходиться парацетамолом.'},
+ {id:'trauma',col:0,t:'Нагрузки и травмы',m:'бокс, штанга, падения',k:'root',
+  facts:['03.2023 бокс → боль в правом локте','10.2022 падение на руки, 06.2024 падение в метро (связки голеностопа)','2024 штанга → обострение локтя','07.2026 велосипед в гору → колено'],
+  todo:'Без бокса, штанги, бега и прыжков. Нагрузка — плавание и ровный велосипед.'},
+ {id:'dst',col:0,t:'Слабая соединительная ткань?',m:'гипотеза ДСТ',k:'root',dashed:true,
+  facts:['Не подтверждено, это гипотеза','Поражены сразу локти, колено, голеностоп, позвоночник — в 38 лет это не похоже на случайность','Ревматологию исключали: HLA-B27 −, РФ −, СРБ 1, СОЭ 1','Признаки, о которых спрашивали: плоскостопие, сколиоз, гибкость в детстве, варикоз'],
+  todo:'Самотест по шкале Бейтона (5+ из 9 — повод). При подозрении — генетика COL1A1/COL1A2/COL3A1/FBN1 (~15–30 тыс. ₽).'},
+ {id:'nose',col:0,t:'Анатомия носа',m:'перегородка, раковины',k:'root',
+  facts:['ЛОР 04.2026: умеренное искривление перегородки. У сомнолога в анамнезе септопластика и вазотомия — уточнить у ЛОРа','Гипертрофия нижних и средних раковин, справа перекрыто устье слуховой трубы','Постназальный затёк ~25 лет, аллергии нет'],
+  todo:'Обсудить с ЛОРом, может ли операция на перегородке и раковинах убрать часть причины апноэ.'},
+ {id:'stress',col:0,t:'Хронический стресс',m:'работа, семья, одиночество',k:'root',
+  facts:['Тяжёлый год: работа, бабушка после ДТП, отношения','Сон сбит, засыпание в 3–4 ночи'],
+  todo:'Держать связь с психиатром, режим сна, движение каждый день.'},
+ // ---- ПРОБЛЕМЫ ----
+ {id:'blood',col:1,t:'Скрытая кровь в кале',m:'Hb+, Hb/Hp+ · 07.2026',k:'red',
+  facts:['Анализ 23–24.07.2026: положительно','Анемии нет (Hb 164)','Источник, скорее, в желудке или 12-перстной кишке','Эндоскопию не удалось сделать в 2024 и 10.2026 из-за рвотного рефлекса'],
+  todo:'Главное по ЖКТ: найти источник. Капсульная эндоскопия или ЭГДС под седацией, тест на хеликобактер.'},
+ {id:'gastro',col:1,t:'Гастропатия',m:'ЭГДС 2024 · прервана',k:'orange',
+  facts:['05.06.2024: эритематозная антральная гастропатия','Осмотр неполный, рекомендовано повторить под седацией','Желчь в норме, желчный с перегибом, камней нет'],
+  todo:'Разо по схеме. Повторная эндоскопия под седацией — рвотного рефлекса во сне нет.'},
+ {id:'reflux',col:1,t:'Рефлюкс до горла',m:'подозрение ЛФР · Разо 20',k:'orange',
+  facts:['ЛОР 28.04.2026: отёк в области черпаловидных хрящей, слизь на связках','Назначен Разо 20 мг (рабепразол) на 4–8 недель','Разо снижает кислоту, но не убирает причину'],
+  todo:'Не есть за 3 часа до сна, приподнять изголовье. Если за 4–8 недель горло и нос лучше — версия ЛОРа подтверждена.'},
+ {id:'rhinitis',col:1,t:'Вазомоторный ринит',m:'заложенность, затёк',k:'orange',
+  facts:['Раковины плохо сокращаются на ксилометазолин','Посев из носа: роста нет','Авамис утром по назначению'],
+  todo:'Без постоянных сосудосуживающих капель. Солевые промывания, увлажнитель.'},
+ {id:'apnea',col:1,t:'Апноэ сна',m:'AHI 12,1 · SpO2 до 82%',k:'red',
+  facts:['Мониторинг 24.04.2026: AHI 12,1/ч (норма < 5), центральный компонент 3,9','Минимальная сатурация 82%, пауза до 16 с, храп 10% сна','Сомнолог 30.09: СОАС лёгкой степени, PAP-терапия или капа + ЛФК глотки'],
+  todo:'Сон на боку, решение по аппарату или капе, миотерапия. Повторное исследование после похудения.'},
+ {id:'elbow',col:1,t:'Правый локоть',m:'тендиноз · PRP 14–15.10',k:'red',
+  facts:['С 03.2023, 20+ врачей, физио, УВТ, 2 блокады, ~40 занятий ЛФК без стойкого эффекта','МРТ пересмотрена: связка целая, итог — хронический тендиноз','PRP сделана 14–15.10.2026 (СМ-Клиника, Сапежников В.В.), 2 недели покоя прошли'],
+  todo:'Сейчас эксцентрика 0,5 кг 3×15 дважды в день. Оценка через 6 недель (~26.11) и 3 месяца (январь 2027), решение про 2-й укол.'},
+ {id:'back',col:1,t:'Поясница',m:'грыжи L4-L5, L5-S1',k:'orange',
+  facts:['МРТ 06.2025: L4-L5 0,3 см (справа), L5-S1 0,4 см (слева), корешки деформированы','Нейрохирург: без операции'],
+  todo:'Плавание (кроль или на спине, без брасса), кор каждый день, перерывы каждые 45 минут.'},
+ {id:'neck',col:1,t:'Шея',m:'C5-C6 · листез C2-C3',k:'yellow',
+  facts:['Рентген 2023: листез C2-C3','Изменения на уровне C5-C6'],
+  todo:'Эргономика рабочего места и перерывы. Наблюдать.'},
+ {id:'knee',col:1,t:'Правое колено',m:'гонартроз 1° · 07.2026',k:'orange',
+  facts:['Рентген 23.07.2026: щель 4,5 мм медиально, мелкие остеофиты → 1° по Kellgren-Lawrence','УЗИ 24.07: хрящ 2,2 / 3,0 / 2,3 мм, связки и мениски в норме','Пойман рано: прогрессирование можно остановить'],
+  todo:'Квадрицепс 3×15, велосипед только по ровному, минус 10 кг. Без приседаний и лестниц под нагрузкой.'},
+ {id:'ankle',col:1,t:'Правый голеностоп',m:'артроз 2° · МРТ 2025',k:'orange',
+  facts:['МРТ 12.05.2025: щель 2,0 мм, хрящ истончён','Плоскостопие, в ProДвижении лечили 4+ раза без эффекта'],
+  todo:'Ортопедические стельки по слепку — главное. Баланс, мышцы стопы, без ударной нагрузки.'},
+ {id:'hct',col:1,t:'Густая кровь',m:'гематокрит 51,6% ↑',k:'yellow',
+  facts:['Гематокрит 51,6% (03.2026) и 51,2% (07.2026) при норме до 50','Эритроциты 5,84 ↑','Возможная связь с ночной нехваткой кислорода при апноэ'],
+  todo:'Пить воду, показать терапевту вместе с данными по апноэ.'},
+ {id:'metab',col:1,t:'Обмен и витамины',m:'D 24↓ · SHBG↓ · АЛТ 51↑',k:'yellow',
+  facts:['Витамин D 24,1 (недостаточность) → D3 5000 МЕ с 03.2026','SHBG 11,3 ↓, индекс свободных андрогенов ↑','АЛТ 51 ↑, холестерин 5,6 ↑','B12 204 — нижняя треть, Разо снижает усвоение'],
+  todo:'Контроль D и B12. ГГТ, липидный профиль, гепатиты B и C из-за АЛТ.'},
+ {id:'heart',col:1,t:'Эпизод с сердцем',m:'13.09 · ЭКГ не сделана',k:'orange',
+  facts:['После 45 минут плавания сразу баня: 1–2 дня давление в груди, тянуло левую руку','ЭКГ 2021: ранняя реполяризация','Визит к врачу после эпизода в чатах не зафиксирован'],
+  todo:'ЭКГ и кардиолог по ДМС. При давлении в груди > 15 минут — сразу 112.'},
+ {id:'mood',col:1,t:'Депрессия',m:'с 04.2026 · Триттико',k:'yellow',
+  facts:['Психиатр 04.2026: депрессия, Триттико на ночь','Побочно: дневная сонливость, сон до 13:00','После лета — пустота, ничего не радует'],
+  todo:'Не бросать резко, дозу решает врач. Сказать врачу про пустоту и сонливость — повод пересмотреть схему.'},
+ // ---- ЧТО СТРАДАЕТ ----
+ {id:'o_sleep',col:2,t:'Сон и энергия',m:'усталость днём',k:'out',
+  facts:['Ночью не хватает кислорода (апноэ)','Триттико даёт сонливость, вместе с апноэ это опасно за рулём','Ринит и рефлюкс мешают дышать ночью'],
+  todo:'Это главный «выход» — улучшится, когда закроются апноэ, рефлюкс и подберут схему лечения.'},
+ {id:'o_move',col:2,t:'Движение и спорт',m:'бокс и штанга закрыты',k:'out',
+  facts:['Болят локоть, колено, голеностоп, поясница','Ударные нагрузки и штанга под запретом','Меньше движения → вес растёт → нагрузка на суставы растёт'],
+  todo:'Плавание 3–4 раза в неделю — единственная нагрузка, которая помогает всем суставам сразу.'},
+ {id:'o_mood',col:2,t:'Настроение',m:'радость, «хочу»',k:'out',
+  facts:['Хроническая боль, плохой сон и стресс давят на настроение','Признак восстановления — вернулось «хочу»'],
+  todo:'Сначала долечиться и наладить сон, потом ставить большие цели.'},
+ {id:'o_work',col:2,t:'Работа и фокус',m:'12+ ч за ПК',k:'out',
+  facts:['Боль в локте мешает печатать и держать мышь','Шея и поясница от долгого сидения','Дневная сонливость снижает концентрацию'],
+  todo:'Эргономика, перерывы, вертикальная мышь, работа без НПВС.'},
+];
+const E=[
+ ['weight','apnea',1,'Вес — главный фактор апноэ: жир сужает дыхательные пути ночью'],
+ ['weight','reflux',1,'Лишний вес повышает давление в животе, кислота уходит вверх'],
+ ['weight','knee',1,'Каждый лишний килограмм нагружает колено при ходьбе в несколько раз'],
+ ['weight','ankle',1,'Голеностоп несёт весь вес при каждом шаге'],
+ ['weight','back',1,'Нагрузка на поясничные диски'],
+ ['weight','metab',0,'SHBG↓ и АЛТ↑ часто связаны с лишним весом (жировая печень — гипотеза, проверить)'],
+ ['weight','heart',0,'Лишний вес — фактор риска для сердца'],
+ ['desk','back',1,'Многочасовое сидение нагружает поясницу'],
+ ['desk','neck',1,'Голова вперёд к монитору — нагрузка на шею'],
+ ['desk','o_work',1,'Работа сидя 12+ часов'],
+ ['nsaid','gastro',1,'Гастропатия — вероятное следствие НПВС (по гастроэнтерологу)'],
+ ['nsaid','blood',0,'НПВС могут вызывать эрозии и кровоточивость слизистой'],
+ ['trauma','elbow',1,'Бокс 2023 → боль, штанга 2024 → обострение'],
+ ['trauma','ankle',1,'Падение в метро 2024, травмы связок'],
+ ['trauma','knee',1,'Велосипед в гору 07.2026 → гонартроз'],
+ ['trauma','back',0,'Штанга и бокс — нагрузка на позвоночник'],
+ ['dst','elbow',0,'Если коллаген менее прочный, сухожилия заживают хуже'],
+ ['dst','knee',0,'Ранний износ хряща'],
+ ['dst','ankle',0,'Плоскостопие и слабые связки'],
+ ['dst','back',0,'Ранние грыжи дисков'],
+ ['nose','rhinitis',1,'Гипертрофия раковин и перегородка — по ЛОРу'],
+ ['nose','apnea',0,'Плохое носовое дыхание усиливает апноэ'],
+ ['stress','mood',1,'Тяжёлый год → депрессия (по психиатру)'],
+ ['gastro','blood',0,'Источник крови, вероятно, в желудке — подтвердит эндоскопия'],
+ ['reflux','rhinitis',1,'Версия ЛОРа: кислота раздражает горло и носоглотку'],
+ ['rhinitis','apnea',0,'Заложенный нос ночью ухудшает дыхание'],
+ ['reflux','apnea',0,'Рефлюкс и апноэ часто усиливают друг друга'],
+ ['apnea','hct',0,'Ночная нехватка кислорода может повышать гематокрит'],
+ ['apnea','heart',0,'Апноэ нагружает сердце'],
+ ['apnea','o_sleep',1,'Сатурация до 82% — сон не восстанавливает'],
+ ['rhinitis','o_sleep',1,'Заложенность и затёк мешают спать'],
+ ['mood','o_sleep',1,'Триттико: сонливость днём, сон до 13:00'],
+ ['mood','o_mood',1,'Пустота и ангедония'],
+ ['elbow','nsaid',1,'Боль в локте → годы НПВС (обратная связь)'],
+ ['elbow','o_move',1,'Нельзя хват, штангу, бокс'],
+ ['elbow','o_work',1,'Боль мешает работать с мышью и клавиатурой'],
+ ['knee','o_move',1,'Без бега, приседаний, лестниц'],
+ ['ankle','o_move',1,'Без ударной нагрузки'],
+ ['back','o_move',1,'Ограничены наклоны, вес, брасс'],
+ ['back','o_work',1,'Долгое сидение болезненно'],
+ ['neck','o_work',0,'Шея при работе за монитором'],
+ ['metab','o_mood',0,'Дефицит витамина D может влиять на энергию и настроение'],
+ ['o_sleep','o_mood',1,'Плохой сон → хуже настроение'],
+];
+const LEV=[
+ {t:'Снижение веса до 78–82 кг',s:'плавание + режим еды',hit:['apnea','reflux','knee','ankle','back','metab','heart','hct']},
+ {t:'Лечение апноэ',s:'аппарат или капа, сон на боку',hit:['apnea','hct','heart','o_sleep','o_mood']},
+ {t:'Плавание 3–4 раза в неделю',s:'кроль или на спине, без брасса',hit:['back','knee','ankle','weight','o_mood']},
+ {t:'Режим еды вечером',s:'не есть за 3 часа до сна, изголовье выше',hit:['reflux','rhinitis','apnea','gastro']},
+ {t:'Отказ от НПВС',s:'парацетамол, PRP вместо таблеток',hit:['gastro','blood','reflux']},
+ {t:'Разо по схеме ЛОРа',s:'4–8 недель, не бросать самому',hit:['reflux','rhinitis','gastro']},
+ {t:'PRP + эксцентрика',s:'локоть, затем без НПВС',hit:['elbow','nsaid','o_work']},
+ {t:'Перерывы каждые 45 минут + кор',s:'эргономика рабочего места',hit:['back','neck','o_work']},
+ {t:'Стельки по слепку',s:'плоскостопие',hit:['ankle','knee']},
+];
+const CYC=[
+ {t:'💊 Боль → таблетки → желудок',steps:['Локоть и суставы болят годами','НПВС месяцами и годами','Гастропатия','Скрытая кровь в кале'],loop:'↺ боль не уходит → снова НПВС',brk:'Разрыв: PRP и эксцентрика вместо таблеток, Разо, найти источник крови.',ids:['elbow','nsaid','gastro','blood']},
+ {t:'⚖️ Вес ↔ суставы',steps:['Болят колено, голеностоп, поясница','Меньше движения, спорт закрыт','Вес растёт','Нагрузка на суставы и диски растёт'],loop:'↺ боль усиливается → ещё меньше движения',brk:'Разрыв: плавание (нагрузка без удара) и еда. Минус 10 кг снимает нагрузку со всех трёх.',ids:['knee','ankle','back','o_move','weight']},
+ {t:'🌙 Ночь без кислорода',steps:['Вес + рефлюкс + заложенный нос','Апноэ: SpO2 до 82%','Сон не восстанавливает, Триттико добавляет сонливость','Нет сил двигаться, настроение ниже'],loop:'↺ меньше движения → вес → апноэ хуже',brk:'Разрыв: сон на боку, не есть за 3 часа до сна, решение по аппарату, Разо.',ids:['weight','reflux','rhinitis','apnea','o_sleep','mood','o_mood']},
+];
+const GAPS=[
+ {c:'#ef4444',t:'Источник скрытой крови',s:'Капсульная эндоскопия или ЭГДС под седацией, тест на хеликобактер. Пока не сделано.'},
+ {c:'#ef4444',t:'ЭКГ после эпизода 13.09',s:'В документах нет. Нужны ЭКГ и кардиолог.'},
+ {c:'#f59e0b',t:'Причина АЛТ 51',s:'ГГТ, липидный профиль, гепатиты B и C, УЗИ печени — проверить жировую печень.'},
+ {c:'#f59e0b',t:'Слабая соединительная ткань?',s:'Шкала Бейтона, при подозрении — генетика. Объяснит, почему страдают сразу все суставы.'},
+ {c:'#eab308',t:'Эффект Разо',s:'Через 4–8 недель: стало ли лучше с горлом и носом. Это проверка версии ЛОРа.'},
+ {c:'#eab308',t:'Повторное исследование сна',s:'После похудения и миотерапии, чтобы увидеть динамику AHI.'},
+ {c:'#3b82f6',t:'Контроль D, B12, АТ-ТПО',s:'Витамин D после курса, B12 на фоне Разо, антитела к щитовидке.'},
+ {c:'#f59e0b',t:'Итог PRP',s:'Оценка через 6 недель (~26.11) и 3 месяца (январь 2027). Нужны стартовые цифры боли.'},
+ {c:'#3b82f6',t:'Итог приёма 20.10',s:'Что сказал гастроэнтеролог — в медкарте не записано.'},
+];
+
+// ---- layout ----
+const svg=document.getElementById('lk-svg');const NS='http://www.w3.org/2000/svg';
+const W=1000,colX=[20,385,775],nodeW=[230,250,205],nodeH=40;
+const byCol=[[],[],[]];N.forEach(n=>byCol[n.col].push(n));
+const top0=42,H=760;
+byCol.forEach((arr,c)=>{const gap=(H-top0-10)/arr.length;arr.forEach((n,i)=>{n.x=colX[c];n.w=nodeW[c];n.y=top0+i*gap+(gap-nodeH)/2;n.h=nodeH;});});
+const idx={};N.forEach(n=>idx[n.id]=n);
+function el(tag,attrs,parent){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);(parent||svg).appendChild(e);return e;}
+['КОРНИ','ДИАГНОЗЫ И НАХОДКИ','ЧТО СТРАДАЕТ'].forEach((h,c)=>{const t=el('text',{x:colX[c]+4,y:22,class:'lk-colh'});t.textContent=h;});
+const gE=el('g',{}),gN=el('g',{});
+const edgeEls=[];
+E.forEach(([a,b,solid,why])=>{const A=idx[a],B=idx[b];let d;
+  const ay=A.y+A.h/2,by=B.y+B.h/2;
+  if(A.col<B.col){const x1=A.x+A.w,x2=B.x,mx=(x1+x2)/2;d=`M${x1},${ay} C${mx},${ay} ${mx},${by} ${x2},${by}`;}
+  else if(A.col===B.col){if(A.col===2){const x=A.x,bul=x-30-Math.min(40,Math.abs(by-ay)*0.2);d=`M${x},${ay} C${bul},${ay} ${bul},${by} ${x},${by}`;}else{const x=A.x+A.w,bul=x+34+Math.min(50,Math.abs(by-ay)*0.2);d=`M${x},${ay} C${bul},${ay} ${bul},${by} ${x},${by}`;}}
+  else {const x1=A.x,x2=B.x+B.w,mx=(x1+x2)/2;d=`M${x1},${ay} C${mx},${ay+60} ${mx},${by+60} ${x2},${by}`;}
+  const col=A.k==='root'?'#7c5cd6':(COL[A.k]||'#3b82f6');
+  const p=el('path',{d,class:'lk-edge',stroke:col,'stroke-opacity':solid?0.55:0.45,'stroke-dasharray':solid?'':'5 5','marker-end':''},gE);
+  const tt=el('title',{},p);tt.textContent=A.t+' → '+B.t+': '+why;
+  edgeEls.push({a,b,p,solid,why});
+});
+const nodeEls={};
+N.forEach(n=>{const g=el('g',{class:'lk-node','data-id':n.id,transform:`translate(${n.x},${n.y})`},gN);
+  const c=COL[n.k];
+  el('rect',{width:n.w,height:n.h,rx:9,fill:'#0f1828',stroke:c,'stroke-opacity':0.75,'stroke-width':1.3,'stroke-dasharray':n.dashed?'4 3':''},g);
+  el('rect',{width:4,height:n.h-14,x:7,y:7,rx:2,fill:c},g);
+  const t=el('text',{x:19,y:17},g);t.textContent=n.t;
+  const m=el('text',{x:19,y:31,class:'lk-meta'},g);m.textContent=n.m;
+  g.addEventListener('click',()=>select(n.id));
+  nodeEls[n.id]=g;
+});
+// graph helpers
+function chain(id){const up=new Set(),down=new Set();
+  const walk=(cur,dir,set)=>{E.forEach(([a,b])=>{const nx=dir>0?(a===cur?b:null):(b===cur?a:null);if(nx&&!set.has(nx)&&nx!==id){set.add(nx);if(!(dir>0&&a==='elbow'&&b==='nsaid'))walk(nx,dir,set);}});};
+  walk(id,1,down);walk(id,-1,up);return {up,down};}
+function highlight(ids,edgeFilter){
+  Object.entries(nodeEls).forEach(([k,g])=>g.classList.toggle('lk-dim',!ids.has(k)));
+  edgeEls.forEach(e=>{const on=edgeFilter(e);e.p.classList.toggle('lk-dim',!on);e.p.classList.toggle('lk-hot',on);});
+}
+function clearHL(){Object.values(nodeEls).forEach(g=>g.classList.remove('lk-dim'));edgeEls.forEach(e=>{e.p.classList.remove('lk-dim','lk-hot');});}
+const KLBL={root:['Корень','#8b5cf6'],red:['Срочно','#ef4444'],orange:['Важно','#f59e0b'],yellow:['Наблюдать','#eab308'],out:['Что страдает','#3b82f6']};
+const card=document.getElementById('lk-card');
+function chipList(arr){return arr.map(([id,why])=>`<span class="lk-chip" data-go="${id}" title="${why.replace(/"/g,'&quot;')}">${idx[id].t}</span>`).join('')||'<span class="lk-hint">—</span>';}
+function select(id){const n=idx[id];const {up,down}=chain(id);
+  const ids=new Set([id,...up,...down]);
+  highlight(ids,e=>ids.has(e.a)&&ids.has(e.b)&&(e.a===id||e.b===id||up.has(e.a)&&(up.has(e.b)||e.b===id)||down.has(e.b)&&(down.has(e.a)||e.a===id)));
+  const ins=E.filter(e=>e[1]===id).map(e=>[e[0],e[3]]),outs=E.filter(e=>e[0]===id).map(e=>[e[1],e[3]]);
+  const [lbl,c]=KLBL[n.k];
+  card.innerHTML=`<span class="lk-badge" style="color:${c};border-color:${c}55;background:${c}14">${lbl}${n.dashed?' · гипотеза':''}</span>
+  <h3>${n.t}</h3><div class="lk-hint" style="font-family:'JetBrains Mono',monospace;font-size:11px">${n.m}</div>
+  <div class="lk-lbl">Факты из документов</div><ul>${n.facts.map(f=>`<li>${f}</li>`).join('')}</ul>
+  <div class="lk-lbl">Откуда растёт · ${ins.length}</div><div>${chipList(ins)}</div>
+  <div class="lk-lbl">На что влияет · ${outs.length}</div><div>${chipList(outs)}</div>
+  <div class="lk-lbl">Что делать</div><div class="lk-todo">${n.todo}</div>
+  <div style="margin-top:12px"><span class="lk-chip" data-reset="1">✕ Показать всё</span></div>`;
+  card.querySelectorAll('[data-go]').forEach(x=>x.onclick=()=>select(x.dataset.go));
+  card.querySelector('[data-reset]').onclick=reset;
+}
+function reset(){clearHL();card.innerHTML=`<span class="lk-badge" style="color:#06b6d4;border-color:#06b6d455;background:#06b6d414">Как читать</span>
+  <h3>Нажми на любой блок</h3>
+  <div class="lk-hint" style="margin-top:6px">Подсветится вся цепочка: откуда проблема растёт и на что влияет дальше. Здесь появятся факты из документов и что делать.</div>
+  <div class="lk-lbl">Главное, что видно на карте</div>
+  <ul><li><b>Вес</b> — самый «связанный» корень: от него идут линии к апноэ, рефлюксу, колену, голеностопу, пояснице, обмену и сердцу.</li>
+  <li><b>Локоть</b> тянет за собой желудок: годы НПВС → гастропатия → скрытая кровь.</li>
+  <li><b>Нос, рефлюкс и вес</b> сходятся в одной точке — апноэ, а оно бьёт по сну, крови и настроению.</li>
+  <li>Четыре сустава сразу в 38 лет — повод проверить <b>соединительную ткань</b>.</li></ul>
+  <div class="lk-lbl">Начни отсюда</div>
+  <div>${['weight','apnea','elbow','blood'].map(i=>`<span class="lk-chip" data-go="${i}">${idx[i].t}</span>`).join('')}</div>`;
+  card.querySelectorAll('[data-go]').forEach(x=>x.onclick=()=>select(x.dataset.go));}
+reset();
+// levers
+const lv=document.getElementById('lk-levers');const maxH=Math.max(...LEV.map(l=>l.hit.length));
+LEV.sort((a,b)=>b.hit.length-a.hit.length).forEach(l=>{const d=document.createElement('div');d.className='lk-lev';
+  d.innerHTML=`<div class="nm">${l.t}<small>${l.s}</small></div><div class="lk-bar"><div style="width:${l.hit.length/maxH*100}%"></div><span>${l.hit.map(h=>idx[h].t).join(' · ')}</span></div><div class="ct">${l.hit.length}</div>`;
+  d.onclick=()=>{const ids=new Set(l.hit);highlight(ids,e=>ids.has(e.a)&&ids.has(e.b));
+    card.innerHTML=`<span class="lk-badge" style="color:#10b981;border-color:#10b98155;background:#10b98114">Рычаг</span><h3>${l.t}</h3><div class="lk-hint">${l.s}</div><div class="lk-lbl">Затрагивает · ${l.hit.length}</div><div>${l.hit.map(h=>`<span class="lk-chip" data-go="${h}">${idx[h].t}</span>`).join('')}</div><div style="margin-top:12px"><span class="lk-chip" data-reset="1">✕ Показать всё</span></div>`;
+    card.querySelectorAll('[data-go]').forEach(x=>x.onclick=()=>select(x.dataset.go));card.querySelector('[data-reset]').onclick=reset;
+    document.querySelector('.lk-main').scrollIntoView({behavior:'smooth',block:'start'});};
+  lv.appendChild(d);});
+// cycles
+const cy=document.getElementById('lk-cycles');
+CYC.forEach(c=>{const d=document.createElement('div');d.className='lk-cyc';d.style.cursor='pointer';
+  d.innerHTML=`<h4>${c.t}</h4><div class="lk-steps">${c.steps.map((s,i)=>`${i?'<div class="lk-arrow">↓</div>':''}<div class="lk-step">${s}</div>`).join('')}</div><div class="lk-loop">${c.loop}</div><div class="lk-break">${c.brk}</div>`;
+  d.onclick=()=>{const ids=new Set(c.ids);highlight(ids,e=>ids.has(e.a)&&ids.has(e.b));document.querySelector('.lk-main').scrollIntoView({behavior:'smooth',block:'start'});};
+  cy.appendChild(d);});
+// gaps
+const gp=document.getElementById('lk-gaps');
+GAPS.forEach(g=>{const d=document.createElement('div');d.className='lk-gap';d.innerHTML=`<div class="dot" style="background:${g.c}"></div><div><b>${g.t}</b><span>${g.s}</span></div>`;gp.appendChild(d);});
+})();
+</script>
+
+<!-- ====== TAB: DOCS (реестр документов и анализов) ====== -->
+<style>
+.dc-wrap{max-width:1100px;margin:0 auto;padding:28px 28px 60px}
+.dc-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.dc-nav{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px}
+.dc-nav a{font-size:12px;color:var(--text2);text-decoration:none;padding:5px 11px;border:1px solid var(--border);border-radius:20px;background:var(--bg2)}
+.dc-nav a:hover{border-color:var(--blue);color:var(--text)}
+.dc-sec{margin-top:28px;scroll-margin-top:12px}
+.dc-tbl-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow-x:auto}
+.dc-tbl{width:100%;border-collapse:collapse;font-size:12.5px;min-width:560px}
+.dc-tbl th{text-align:left;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);font-weight:500;padding:10px 12px;border-bottom:1px solid var(--border)}
+.dc-tbl td{padding:8px 12px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:top;line-height:1.5}
+.dc-tbl tr:last-child td{border-bottom:none}
+.dc-tbl td:first-child{color:var(--text);white-space:nowrap}
+.dc-tbl td.num{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums;white-space:nowrap}
+.dc-tbl tr.bad td{background:rgba(239,68,68,.05)}
+.dc-tbl tr.bad td.num{color:#f87171;font-weight:600}
+.dc-tbl tr.warn td.num{color:#fbbf24;font-weight:600}
+.dc-tbl tr.ok td.num{color:#34d399}
+.dc-sub{font-size:13px;font-weight:600;margin:16px 0 8px;color:var(--text)}
+.dc-note{font-size:12px;color:var(--text2);line-height:1.6;margin-top:8px}
+.dc-todo{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.dc-tg{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px}
+.dc-tg h4{font-size:12px;font-family:'JetBrains Mono',monospace;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px}
+.dc-ti{display:flex;gap:8px;align-items:flex-start;padding:4px 0;font-size:12.5px;color:var(--text2);line-height:1.45;cursor:pointer}
+.dc-ti .dl-check{margin-top:2px}
+.dc-ti.done span{text-decoration:line-through;color:var(--text3)}
+@media (max-width:900px){.dc-kpis{grid-template-columns:repeat(2,1fr)}.dc-todo{grid-template-columns:1fr}.dc-wrap{padding:20px 16px 48px}}
+</style>
+
+<div class="panel" id="tab-docs">
+<div class="dc-wrap">
+  <div class="lk-eyebrow">// реестр документов · обновлено 21.11.2026</div>
+  <div class="lk-h1">🗂 Все документы и анализы</div>
+  <div class="lk-sub">Каждый документ с датой, где сделан и что нашли. Цифры взяты из разборов, где документы читались целиком. Где цифр не было, так и написано. Это не медицинское заключение, а первоисточники для себя и для врача.</div>
+
+  <div class="lk-kpis dc-kpis">
+    <div class="lk-kpi"><b style="color:#60a5fa">~55+</b><span>документов, 07.2021 – 10.2026</span></div>
+    <div class="lk-kpi"><b style="color:#f87171">7</b><span>отклонений в анализах</span></div>
+    <div class="lk-kpi"><b style="color:#34d399">10</b><span>диагнозов исключено анализами</span></div>
+    <div class="lk-kpi"><b style="color:#fbbf24" id="dc-todo-count">27</b><span>анализов и шагов ещё не сделано</span></div>
+  </div>
+
+  <div class="dc-nav">
+    <a href="#dc-labs">🔬 Анализы</a><a href="#dc-img">🩻 МРТ, КТ, УЗИ, рентген</a><a href="#dc-func">🫀 ЭКГ, сон, эндоскопия</a><a href="#dc-cons">👨‍⚕️ Консультации</a><a href="#dc-diff">⚠️ Расхождения</a><a href="#dc-todo">🕳 Не сделано</a><a href="#dc-mom">👩 Мама</a>
+  </div>
+
+  <div class="hq-alert" style="max-width:none;margin-bottom:0"><span style="font-size:18px">⚠️</span><div><b>Отклонения:</b> витамин D 24,1 ↓ · SHBG 11,3 ↓ · гематокрит 51,6 / 51,2 ↑ · эритроциты 5,84 ↑ · АЛТ 51,3 ↑ · холестерин 5,6 ↑ · <b>скрытая кровь в кале +</b>.<br><b style="color:#a7f3d0">Исключено:</b> <span style="color:#a7f3d0">ревматоидный артрит (РФ −), Бехтерев (HLA-B27 −, КТ без сакроилеита), системное воспаление (СРБ 1, СОЭ 1), анемия, дефицит железа, нарушение функции щитовидки, миастения, поражение нервов руки (ЭНМГ норма), туннельный синдром, разрыв TFCC.</span></div></div>
+
+  <div class="dc-sec" id="dc-labs">
+    <div class="lk-h2">🔬 Лабораторные анализы</div>
+    <div class="dc-sub">Lab4U, 17–18.03.2026 (~9 400 ₽)</div>
+    <div class="dc-tbl-wrap" id="dc-lab4u"></div>
+    <div class="dc-note">Вывод тогда: системного воспаления и ревматологии нет. Главная находка — дефицит D (начат D3 5000 МЕ). Низкий SHBG показать эндокринологу.</div>
+    <div class="dc-sub">От гастроэнтеролога, 23–24.07.2026 (~20 000 ₽)</div>
+    <div class="dc-tbl-wrap" id="dc-gi"></div>
+    <div class="dc-note">Вывод: версия «надо лечить желчь» не подтвердилась. Главное — найти источник крови (вероятнее всего желудок, из-за НПВС).</div>
+    <div class="dc-sub">Прочие анализы</div>
+    <div class="dc-tbl-wrap" id="dc-other"></div>
+  </div>
+
+  <div class="dc-sec" id="dc-img">
+    <div class="lk-h2">🩻 Визуализация: МРТ, КТ, рентген, УЗИ</div>
+    <div class="dc-tbl-wrap" id="dc-imaging"></div>
+    <div class="dc-sub">МРТ позвоночника 09.06.2025 (Медси Одинцово) — подробно</div>
+    <div class="dc-tbl-wrap" id="dc-spine"></div>
+  </div>
+
+  <div class="dc-sec" id="dc-func">
+    <div class="lk-h2">🫀 Функциональная диагностика и эндоскопия</div>
+    <div class="dc-tbl-wrap" id="dc-functional"></div>
+    <div class="dc-sub">Исследование сна 24.04.2026 (SOMNOcheck micro, ~8 000 ₽)</div>
+    <div class="dc-tbl-wrap" id="dc-sleep"></div>
+    <div class="dc-note"><b style="color:var(--text)">Сомнолог 30.09.2026</b> (3 000 ₽): в заключении AHI 10,2 (другой метод подсчёта) → СОАС лёгкой степени. Рекомендовано PAP-терапия (например ResVent iBreeze) или капа + ЛФК мышц ротоглотки. В анамнезе указаны септопластика и вазотомия. ИМТ 28,34 (рост 185, вес 97). Прибор не измеряет дыхательные усилия, поэтому деление на центральные и обструктивные приблизительное.</div>
+  </div>
+
+  <div class="dc-sec" id="dc-cons">
+    <div class="lk-h2">👨‍⚕️ Консультации и заключения</div>
+    <div class="dc-sub">Локоть, запястье, стопа (2022–2024)</div>
+    <div class="dc-tbl-wrap" id="dc-cons1"></div>
+    <div class="dc-note">Диагнозы по локтю менялись: латеральный (M77.1) → медиальный эпикондилит (M77.0). Подозревали синдром карпального канала (онемение 3–5 пальцев) и разрыв TFCC — оба не подтвердились. Сопутствующий диагноз — цервикалгия (M54.2).</div>
+    <div class="dc-sub">2025–2026</div>
+    <div class="dc-tbl-wrap" id="dc-cons2"></div>
+  </div>
+
+  <div class="dc-sec" id="dc-diff">
+    <div class="lk-h2">⚠️ Расхождения в документах</div>
+    <div class="lk-h2sub">Места, где документы говорят разное. Стоит уточнить у врача.</div>
+    <div class="dc-tbl-wrap" id="dc-diffs"></div>
+  </div>
+
+  <div class="dc-sec" id="dc-todo">
+    <div class="lk-h2">🕳 Что ещё не сдано или не сделано</div>
+    <div class="lk-h2sub">Отметки сохраняются только в этом браузере.</div>
+    <div class="dc-todo" id="dc-todos"></div>
+  </div>
+
+  <div class="dc-sec">
+    <div class="lk-h2">📅 Хронология документов</div>
+    <div class="dc-tbl-wrap" id="dc-chrono"></div>
+  </div>
+
+  <div class="dc-sec" id="dc-mom">
+    <div class="lk-h2">👩 Приложение: мама</div>
+    <div class="dc-tbl-wrap" style="padding:14px 16px"><div class="dc-note" style="margin:0">
+      Документы Дикуля «Беляево», 04.2026. Правосторонний <b style="color:var(--text)">гонартроз 3-й стадии</b>, киста Бейкера, синдром грушевидной мышцы справа. УЗИ седалищного нерва: отёк на уровне грушевидной мышцы (площадь 1,08 см², толщина 0,63 см), ниже по бедру норма. Сделана блокада грушевидной мышцы (Дипроспан 1,0 + Новокаин 1% 3 мл), перенесла хорошо. Назначено: Аэртал 100 мг ×2 10 дней, Омез 10 дней, Трентал 4 недели, физио, курс гиалуроновой кислоты, пункция кисты. МРТ коленей 05.2026: справа остеоартроз 3 ст., частичный разрыв ПКС, начальные признаки остеонекроза; слева 2–3 ст. В анамнезе удаление щитовидной железы (2004). По PRP: сначала второе мнение ортопеда из-за остеонекроза.
+    </div></div>
+  </div>
+
+  <div class="lk-foot">Источники: реестр медицинских документов (21.11.2026) и медкарта (20.11.2026). Сами PDF в выгрузке чатов не сохраняются, данные взяты из их разборов.</div>
+</div>
+</div>
+
+<script>
+(function(){
+function tbl(id, head, rows){
+  const el=document.getElementById(id); if(!el) return;
+  el.innerHTML='<table class="dc-tbl"><thead><tr>'+head.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead><tbody>'+
+    rows.map(r=>{const cls=r.c||''; const cells=r.v||r; return '<tr class="'+cls+'">'+cells.map((c,i)=>'<td'+((r.n||[]).includes(i)?' class="num"':'')+'>'+c+'</td>').join('')+'</tr>';}).join('')+'</tbody></table>';
+}
+const L=(v,c)=>({v,c,n:[1,2]});
+tbl('dc-lab4u',['Показатель','Результат','Норма','Оценка'],[
+ L(['Витамин D 25-OH','24,1 нг/мл','30–100','↓ недостаточность'],'bad'),
+ L(['Витамин B12','204 пмоль/л','148–664','нижняя треть, пересдать (Разо снижает усвоение)'],'warn'),
+ L(['Фолиевая кислота','13,6 нмоль/л','6,8–45,3','норма'],'ok'),
+ L(['Ферритин','177,5 мкг/л','20–250','норма'],'ok'),
+ L(['Железо','20,64 мкмоль/л','10,7–28,6','норма'],'ok'),
+ L(['Магний','0,81 ммоль/л','0,73–1,03','норма'],'ok'),
+ L(['Цинк','15,2 мкмоль/л','11,1–19,5','норма'],'ok'),
+ L(['ТТГ','1,054 мМЕ/л','0,4–4,0','норма'],'ok'),
+ L(['Т4 свободный','11,36 пмоль/л','7,7–14,2','норма'],'ok'),
+ L(['Глюкоза','5,36 ммоль/л','4,1–6,1','норма'],'ok'),
+ L(['Тестостерон общий','5,39 мкг/л','2,5–9,5','норма'],'ok'),
+ L(['SHBG','11,3 нмоль/л','13–71','↓ (часто с лишним весом)'],'bad'),
+ L(['Индекс свободных андрогенов','165,4%','24–122','↑ из-за низкого SHBG'],'warn'),
+ L(['Тестостерон свободный','0,165 мкг/л (3,07%)','0,057–0,178','верх нормы'],'ok'),
+ L(['Гемоглобин','167 г/л','135–175','норма'],'ok'),
+ L(['Эритроциты','5,84','4,32–5,72','↑ слегка'],'warn'),
+ L(['Гематокрит','51,6%','38,8–50','↑ слегка, возможна связь с апноэ'],'bad'),
+ L(['Лейкоциты','9,72','4–10,5','норма, лейкоформула норма'],'ok'),
+ L(['СОЭ','1 мм/ч','1–15','норма'],'ok'),
+ L(['СРБ','1 мг/л','0–5','норма'],'ok'),
+ L(['Ревматоидный фактор','4 МЕ/мл','0–14','норма'],'ok'),
+ L(['АСЛ-О','36 МЕ/мл','0–200','норма'],'ok'),
+ L(['HLA-B27','не обнаружен','—','Бехтерев маловероятен'],'ok'),
+]);
+const G=(v,c)=>({v,c,n:[1]});
+tbl('dc-gi',['Показатель','Результат','Оценка'],[
+ G(['Скрытая кровь в кале (Hb)','положительно','⚠️ главное'],'bad'),
+ G(['Комплекс гемоглобин-гаптоглобин (Hb/Hp)','положительно','чаще источник в желудке / 12-перстной кишке'],'bad'),
+ G(['Гемоглобин','164','анемии нет'],'ok'),
+ G(['Гематокрит','51,2%','↑ второй раз подряд'],'bad'),
+ G(['АЛТ','51,3','↑ немного, АСТ в норме'],'warn'),
+ G(['Билирубин','12,7','норма, застоя желчи нет'],'ok'),
+ G(['Холестерин','5,6','↑ слегка'],'warn'),
+ G(['СРБ / СОЭ','1 / 1','воспаления нет'],'ok'),
+ G(['Кальпротектин','< 20','воспаления кишечника нет'],'ok'),
+ G(['Эластаза','218','норма (> 200), у нижней границы'],'ok'),
+ G(['Нейтральный жир / жирные кислоты в кале','нет','желчь переваривает жир'],'ok'),
+ G(['Йодофильная флора','умеренно','брожение углеводов'],'warn'),
+ G(['Клостридии','не обнаружены','норма'],'ok'),
+ G(['Серологические исследования (2 файла)','—','содержание отдельно не разбиралось'],''),
+]);
+tbl('dc-other',['Дата','Анализ','Результат'],[
+ ['04.03.2023','Назальный секрет (Медси)','Эозинофилов 0%, аллергии нет'],
+ ['31.05 / 05.06.2024','Антитела к скелетным мышцам (Медси)','< 20 (норма), миастения исключена'],
+ ['2024','«Диагностика аутоиммунных заболеваний» (Медси)','Файл был в загрузке, отдельно не разбирался'],
+ ['14.04.2026','Посев из носа','Роста нет, стафилококка нет, Бактробан не нужен'],
+]);
+const B=v=>({v,c:'bad'});
+tbl('dc-imaging',['Дата','Исследование','Где / врач','Что нашли'],[
+ ['31.07.2021','Рентген лёгких, 2 проекции','—','Норма'],
+ ['13.03.2023','УЗИ правого локтя','Медси','Норма'],
+ ['03 и 06.2023','УЗИ лучезапястного сустава','Медси','Структурных нарушений нет'],
+ ['18.07.2023','Рентген шеи с функциональными пробами','Медси Одинцово','Начальный остеохондроз; листез C2 до 2 мм, C3 до 1 мм; лордоз сохранён'],
+ ['24.08.2023','Рентген локтей','Медси','Линейный периостит проксимальнее латерального надмыщелка справа'],
+ ['29.08.2023','УЗИ правого локтя','Медси','Нарушений нет'],
+ ['29.09.2023','МРТ локтя и запястья','—','Локоть: мелкие остеофиты, склероз, малый синовит, сухожилия целы. Запястье: дегенерация TFCC'],
+ B(['04.06.2024','УЗИ правого локтя','Медси','<b>Признаки эпикондилита</b>: неровные контуры надмыщелков, кальцинаты и фиброз в энтезах'],),
+ ['06.2024','УЗИ запястья','Медси','Дегенеративно-дистрофические изменения по типу деформирующего артроза'],
+ ['06.2024','УЗИ срединного нерва','Медси','Норма (9–10 мм²), туннельного синдрома нет'],
+ ['29.06.2024','Рентген левого голеностопа (после падения)','Медси','Костно-травматических изменений нет'],
+ B(['12.05.2025','МРТ правого локтя','«Клиника Здоровья», Леденев В.В.','«Частичный разрыв (растяжение?) локтевой коллатеральной связки», жидкость у медиального надмыщелка, отёк, малый синовит, остеофиты, склероз. Кольцевая связка норма']),
+ ['12.05.2025','МРТ правого лучезапястного','там же','Патологии нет; хрящ истончён, склероз; <b>TFCC цел</b>'],
+ B(['12.05.2025','МРТ правого голеностопа','там же','<b>Остеоартроз 2°</b>: щель 2,0 мм (норма до 3,0), хрящ истончён, склероз; связки и ахилл норма']),
+ B(['09.06.2025','МРТ позвоночника, 3 отдела','Медси Одинцово','2 поясничные грыжи — подробно ниже']),
+ ['2026','Пересмотр МРТ локтя','ProДвижение + Пирогова','<b>Связка целая</b>. Итог: хронический тендиноз / эпикондилит'],
+ ['—','КТ крестцово-подвздошных сочленений','—','Сакроилеита нет (со слов, документ не разбирался)'],
+ ['20.03.2026','УЗИ щитовидной железы','Медси Одинцово, Фомичева О.А.','Объём 22,69 см³ (9,52 / 9,67, перешеек 3,5 мм); узлов нет; васкуляризация умеренно усилена; рекомендованы эндокринолог и АТ-ТПО'],
+ B(['23.07.2026','Рентген правого колена','Медси Одинцово, Мулюкова С.Ю.','Щель медиально 4,5 мм, латерально 5,5 мм; мелкие остеофиты → <b>гонартроз 1°</b> (Kellgren-Lawrence)']),
+ ['24.07.2026','УЗИ правого колена','Медси Одинцово, Ким И.Ю.','Хрящ 2,2 / 3,0 / 2,3 мм; связки, мениски, сухожилия норма; жидкости нет'],
+ ['23–24.07.2026','УЗИ брюшной полости','Медси','Желчный: перегиб в теле, камней и сладжа нет, стенка 2,5 мм. Поджелудочная: диффузные изменения. Выраженный пневматоз кишечника'],
+]);
+tbl('dc-spine',['Отдел','Находки'],[
+ ['Шейный','Дистрофия C2-Th1; правосторонний сколиоз; <b>протрузия C5-C6 0,15 см</b>, корешки не сдавлены; гемангиомы C3 (0,6 см), C7 (1,0 см); уплотнение задней продольной связки'],
+ ['Грудной','Начальная дистрофия; S-образная деформация; гемангиомы Th5 (1,7), Th6 (0,9), Th7 (1,7 см); уплотнение ЗПС Th4-Th5; грыж нет'],
+ B(['Поясничный','<b>L4-L5: грыжа 0,3 см</b>, правосторонняя фораминальная, корешок L4 справа деформирован. <b>L5-S1: грыжа 0,4 см</b>, левосторонняя парамедианно-заднебоковая, корешок S1 слева деформирован и оттеснён. Компрессия дурального мешка. Дегидратация L1-S1, снижение высоты L4-S1, остеофиты фасеток']),
+ ['Нейрохирург','Операция не показана'],
+]);
+tbl('dc-functional',['Дата','Исследование','Где / врач','Результат'],[
+ ['31.07.2021','ЭКГ, 12 отведений','—','Синусовый ритм 61, синдром ранней реполяризации (вариант нормы)'],
+ B(['05.06.2024','ЭГДС','Медси Одинцово, Самедов К.Х.','<b>Прервана</b> (рвотный рефлекс). Эритематозная антральная гастропатия. Рекомендовано повторить под седацией']),
+ ['18.06.2024','ЭНМГ рук','Медси','Норма'],
+ B(['24.04.2026','Кардиореспираторный мониторинг сна','Медси (по направлению ЛОРа)','AHI 12,1, сатурация до 82% — подробно ниже']),
+ B(['08.10.2026','Повторная попытка эндоскопии','—','Не состоялась: рвотный рефлекс, конфликт с врачом']),
+ B(['после 13.09.2026','ЭКГ после эпизода с давлением в груди','—','<b>Не сделана</b>']),
+]);
+const S=(v,c)=>({v,c,n:[1]});
+tbl('dc-sleep',['Показатель','Значение','Норма'],[
+ S(['AHI (апноэ + гипопноэ)','12,1 / час','< 5'],'bad'),
+ S(['Обструктивные апноэ (oAHI)','1,9 / час',''],''),
+ S(['Центральные апноэ (цAHI)','3,9 / час',''],''),
+ S(['Гипопноэ (HI)','7,0 / час',''],'warn'),
+ S(['Максимальная пауза','16 с',''],''),
+ S(['Минимальная сатурация','82%','> 90%'],'bad'),
+ S(['Средняя сатурация','94%','нижняя граница'],'warn'),
+ S(['Микропробуждения (AAI)','25,1 / час','17,5 не связаны с дыханием'],'warn'),
+ S(['Храп','10% времени сна',''],''),
+]);
+tbl('dc-cons1',['Дата','Врач / клиника','Что назначили','Эффект'],[
+ ['10.2022','—','Падение на руки','—'],
+ ['03.2023','—','Бокс → боль в правом локте','—'],
+ ['26.05.2023','Лопащенков, Медси Одинцово','ФТЛ, блокада','временный'],
+ ['29.05.2023','Барктабасов, Медси Одинцово','Пункция, внутрисуставная инъекция','временный'],
+ ['20–27.06.2023','Барктабасов, Медси','Кинезиотейп, лорноксикам','временный'],
+ ['21.07.2023','Гусева, Медси (физиотерапевт)','Лазер, фонофорез','временный'],
+ ['23.07.2023','Мосько, Медси','Мануальный терапевт, ФТЛ','—'],
+ ['24.08.2023','Самиев, Медси Ленинский','Блокада дипроспаном','временный'],
+ ['25.08 / 13.09.2023','Шибанов М.В., Медси Варшавская','«Нуждается в МРТ» (сделано только в 05.2025)','—'],
+ ['01.09.2023','Барктабасов, Медси','Налокотник','—'],
+ ['09–10.2023','Медси','Тендопатия дельтовидной связки голеностопа (M77.5); Флексотрон Соло 2,2% ×2, кетопрофен, хондропротекторы','—'],
+ ['05–11.03.2024','Авдеев, Медси Полянка','УВТ, дипроспан','временный'],
+ ['05.04.2024','Юнасова, ревматолог','Диацереин 4 месяца','—'],
+ ['11–27.05.2024','Балакишиев / Авдеев, Медси','Курс УВТ','временный'],
+ ['31.05.2024','Являнский, Медси Астрадамский','Эторикоксиб, диклофенак','временный'],
+ ['09.06.2024','Являнский','Иммобилизация 2 недели, Дона в/м','улучшение'],
+ ['28.06.2024','—','Падение в метро: частичное повреждение связок левого голеностопа (S93.2)','—'],
+ ['01.09.2024','Медси','Обострение артроза голеностопов + медиальный эпикондилит','—'],
+]);
+tbl('dc-cons2',['Дата','Врач / клиника','Итог'],[
+ ['2023–2024, 04–05.2026','ProДвижение','~40 занятий (лазер, магнит, УЗТ, массаж, ЛФК, УВТ), стопу 4+ раза. Стойкого эффекта нет. Претензия, возвращено 46 800 ₽'],
+ ['2025','Хирурги, нейрохирург','Операция не показана'],
+ ['03.2026','Эндокринолог','Сдать АТ-ТПО'],
+ ['04.2026','Психиатр','Депрессия, Триттико (тразодон) с титрованием'],
+ ['24.04 и 28.04.2026','ЛОР, Медси Хорошёвский, Максимихина Е.','Искривление перегородки, гипертрофия раковин, вазомоторный ринит, подозрение на ларингофарингеальный рефлюкс. Разо 20 мг 4–8 нед, Авамис, Олифрин, метилурациловая мазь; направление на мониторинг сна'],
+ ['30.09.2026','Сомнолог','СОАС лёгкой степени, PAP или капа + ЛФК'],
+ ['14–15.10.2026','СМ-Клиника Солнцево, Сапежников В.В.','Приём 3 200 ₽; <b>PRP в локоть</b> 10 100 ₽; предложен Плексатрон'],
+ B(['20.10.2026','Гастроэнтеролог','Был на приёме; <b>итог не зафиксирован</b>']),
+]);
+tbl('dc-diffs',['Тема','Расхождение','Что делать'],[
+ ['Связка локтя','МРТ 05.2025: «частичный разрыв (растяжение?)». Пересмотр 2026: связка целая','Опираться на пересмотр: хронический тендиноз'],
+ ['Сторона эпикондилита','В документах и латеральный (M77.1), и медиальный (M77.0)','Уточнить у врача, который делал PRP: от этого зависит техника упражнений'],
+ ['AHI','12,1 в отчёте, 10,2 у сомнолога','Разные методы подсчёта; степень та же — лёгкая'],
+ ['Нос','ЛОР 04.2026: искривление перегородки. Сомнолог: в анамнезе септопластика и вазотомия','Уточнить у ЛОРа, что осталось после операции и есть ли смысл повторной'],
+ ['Колено','Рентген: гонартроз 1°. УЗИ на следующий день: хрящ в норме','Не противоречие: кость уже меняется, хрящ ещё есть'],
+ ['Гематокрит','51,6 (03.2026) и 51,2 (07.2026)','Два раза подряд — показать терапевту вместе с данными апноэ'],
+ ['Дата PRP','Реестр: 14–15.10.2026. Медкарта: ~15–18.10','На дашборде взята дата из реестра; 6 недель — около 26.11'],
+]);
+const TODO=[
+ ['Срочно / важно','#ef4444',['Источник скрытой крови: капсульная эндоскопия или ЭГДС под седацией','Дыхательный тест на хеликобактер (13С); отмену Разо за 2 недели решает врач','ЭКГ и кардиолог после эпизода 13.09.2026','Ферритин повторно (раз есть кровь в кале)','Узнать итог приёма гастроэнтеролога 20.10']],
+ ['Печень и обмен','#f59e0b',['ГГТ, щелочная фосфатаза, липидный профиль','Гепатиты B и C','Инсулин натощак + HOMA-IR','Фиброскан или УЗИ печени']],
+ ['Суставы','#8b5cf6',['Мочевая кислота (подагра)','АЦЦП (ревматоидный артрит при отрицательном РФ)','АНА — по решению ревматолога','Насыщение трансферрина (гемохроматоз)','Шкала Бейтона; при подозрении генетика COL1A1/COL1A2/COL3A1/FBN1','Кальций, ПТГ, фосфор']],
+ ['Щитовидка и витамины','#3b82f6',['АТ-ТПО (назначен ещё в 03.2026)','Витамин D контроль (цель 40–60)','B12 контроль (на фоне Разо)']],
+ ['ЛОР и сон','#06b6d4',['Peptest или pH-импедансометрия','Повторное исследование сна после похудения и ЛФК','Решение по аппарату или капе']],
+ ['Контроль','#10b981',['Итог PRP через 6 недель (~26.11)','Итог PRP через 3 месяца (январь 2027)','МРТ поясницы (6–12 мес после 06.2025 — уже пора)','Рентген колена (07.2027)']],
+];
+let saved={}; try{saved=JSON.parse(localStorage.getItem('hq-todo')||'{}')}catch(e){}
+const tw=document.getElementById('dc-todos'); let total=0;
+TODO.forEach(([h,c,items],gi)=>{const d=document.createElement('div');d.className='dc-tg';
+  d.innerHTML='<h4 style="color:'+c+'">'+h+'</h4>'+items.map((t,i)=>{total++;const k=gi+'-'+i;const on=!!saved[k];return '<div class="dc-ti'+(on?' done':'')+'" data-k="'+k+'"><div class="dl-check'+(on?' checked':'')+'">'+(on?'✓':'')+'</div><span>'+t+'</span></div>';}).join('');
+  tw.appendChild(d);});
+document.getElementById('dc-todo-count').textContent=total;
+tw.addEventListener('click',e=>{const row=e.target.closest('.dc-ti');if(!row)return;const k=row.dataset.k;const on=!row.classList.contains('done');
+  row.classList.toggle('done',on);const ch=row.querySelector('.dl-check');ch.classList.toggle('checked',on);ch.textContent=on?'✓':'';
+  if(on)saved[k]=1;else delete saved[k];try{localStorage.setItem('hq-todo',JSON.stringify(saved))}catch(e){}});
+tbl('dc-chrono',['Когда','Что'],[
+ ['07.2021','ЭКГ, рентген лёгких — норма'],['10.2022','Падение на руки'],
+ ['03.2023','Бокс → локоть; назальный секрет (аллергии нет); УЗИ локтя норма'],
+ ['05–09.2023','Приёмы в Медси, блокады, физио; рентген шеи (листез C2-C3); рентген локтя (периостит); голеностоп (тендопатия, Флексотрон)'],
+ ['03–06.2024','УВТ, дипроспан, ревматолог; УЗИ локтя (эпикондилит); ЭНМГ норма; <b>ЭГДС прервана (гастропатия)</b>; падение в метро'],
+ ['09.2024','Обострение артроза голеностопов'],['05.2025','<b>МРТ локтя, запястья, голеностопа</b>'],['06.2025','<b>МРТ позвоночника: 2 поясничные грыжи</b>'],
+ ['03.2026','<b>Lab4U</b> (D ↓, SHBG ↓, ревматология чисто); УЗИ щитовидки'],
+ ['04.2026','ЛОР ×2, посев из носа, <b>исследование сна (AHI 12,1)</b>, психиатр'],
+ ['07.2026','<b>Рентген и УЗИ колена</b> (гонартроз 1°); <b>анализы ЖКТ: скрытая кровь +, АЛТ ↑</b>'],
+ ['09.2026','Эпизод с давлением в груди 13.09; сомнолог 30.09'],
+ ['10.2026','Попытка эндоскопии 08.10; <b>PRP в локоть 14–15.10</b>; гастроэнтеролог 20.10'],
+]);
+})();
+</script>
+
+</body>
+</html>
